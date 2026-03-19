@@ -87,9 +87,9 @@ function normalizePostType(raw) {
   if (!raw) return 'text'
   const s = String(raw).toLowerCase().trim()
   if (/video|reel|short/.test(s)) return 'video'
-  if (/carousel|album|multi/.test(s)) return 'carousel'
+  if (/carousel|album|multi|document/.test(s)) return 'carousel'
   if (/image|photo|picture/.test(s)) return 'image'
-  if (/article|document/.test(s)) return 'article'
+  if (/article/.test(s)) return 'article'
   return 'text'
 }
 
@@ -97,24 +97,36 @@ function normalizeLinkedIn(rows) {
   return rows.map((row) => {
     const hm = buildHeaderMap(row)
     const fc = (...c) => findCol(hm, row, ...c)
+
+    // LinkedIn exports engagement rate and CTR as decimals (0.226 = 22.6%).
+    // Multiply by 100 to convert to percentage points for display.
+    const rawEngRate = parseNum(fc('engagement rate', 'engagement rate (%)'))
+    const engagementRate = rawEngRate > 0 && rawEngRate < 1 ? rawEngRate * 100 : rawEngRate
+
+    const rawCtr = parseNum(fc('click through rate (ctr)', 'ctr', 'click through rate'))
+    const ctr = rawCtr > 0 && rawCtr < 1 ? rawCtr * 100 : rawCtr
+
     return {
       platform: 'linkedin',
-      postDate: parseDate(fc('posted', 'date', 'post date', 'created')),
+      // LinkedIn "All posts" sheet: actual column names after skipping the description row
+      postDate: parseDate(fc('created date', 'posted', 'date', 'post date', 'created')),
       postTitle: String(fc('post title', 'title', 'content', 'text') || '').slice(0, 200),
-      postUrl: String(fc('post url', 'url', 'link', 'permalink') || ''),
-      postType: normalizePostType(fc('post type', 'type', 'content type')),
+      postUrl: String(fc('post link', 'post url', 'url', 'link', 'permalink') || ''),
+      // "Post type" in LinkedIn = Organic/Sponsored (not content format).
+      // "Content Type" = the actual format (Article, Video, etc.)
+      postType: normalizePostType(fc('content type', 'post type', 'type')),
       impressions: parseNum(fc('impressions', 'total impressions')),
-      reach: 0,
-      likes: parseNum(fc('reactions', 'likes', 'total reactions')),
-      comments: parseNum(fc('comments', 'total comments')),
-      shares: parseNum(fc('reposts', 'shares', 'total reposts')),
+      reach: parseNum(fc('unique impressions (organic)', 'reach', 'unique impressions')),
+      likes: parseNum(fc('likes', 'reactions', 'reactions (total)', 'total reactions')),
+      comments: parseNum(fc('comments', 'comments (total)', 'total comments')),
+      shares: parseNum(fc('reposts', 'shares', 'reposts (total)', 'total reposts')),
       saves: 0,
-      clicks: parseNum(fc('clicks', 'link clicks', 'total clicks')),
+      clicks: parseNum(fc('clicks', 'clicks (total)', 'link clicks', 'total clicks')),
       engagements: 0,
-      engagementRate: parseNum(fc('engagement rate', 'engagement rate (%)')),
+      engagementRate,
       retweets: 0,
       followerGrowth: parseNum(fc('follows', 'follower growth', 'new followers')),
-      ctr: 0,
+      ctr,
       avgViewDuration: 0,
     }
   })
@@ -227,6 +239,24 @@ function normalizeYouTube(rows) {
       avgViewDuration: parseNum(fc('average view duration', 'avg view duration', 'average view duration (seconds)')),
     }
   })
+}
+
+// Platform-aware sheet + row extraction.
+// LinkedIn exports have a prose description in row 1; actual column headers are
+// in row 2. The per-post data we want lives in the "All posts" sheet (not "Metrics").
+// All other platforms use sheet 0 with a standard header row.
+function getSheetRows(workbook, platform) {
+  if (platform === 'linkedin') {
+    const sheetName =
+      workbook.SheetNames.find((n) => n.toLowerCase() === 'all posts') ||
+      workbook.SheetNames[0]
+    // range: 1 skips the description row so row 2 becomes the header row
+    const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '', range: 1 })
+    return { sheetName, rows }
+  }
+  const sheetName = workbook.SheetNames[0]
+  const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' })
+  return { sheetName, rows }
 }
 
 function normalizeRows(platform, rows) {
@@ -398,8 +428,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Could not read XLSX file: ' + err.message })
     }
 
-    const sheetName = workbook.SheetNames[0]
-    const rows      = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' })
+    const { sheetName, rows } = getSheetRows(workbook, platform)
 
     // Debug: log raw headers so they appear in Vercel function logs
     console.log(`[Perf import] platform=${platform} sheet="${sheetName}" rows=${rows.length} sheets=${workbook.SheetNames.join(', ')}`)
