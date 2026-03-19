@@ -26,20 +26,10 @@ export const authOptions = {
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        // Debug: log env var presence (values masked) to Vercel function logs
-        console.log('[NextAuth] env check — NEXTAUTH_SECRET:', process.env.NEXTAUTH_SECRET ? `set (${process.env.NEXTAUTH_SECRET.length} chars)` : 'MISSING')
-        console.log('[NextAuth] env check — NEXTAUTH_URL:', process.env.NEXTAUTH_URL || 'MISSING')
-        console.log('[NextAuth] env check — ADMIN_EMAIL:', process.env.ADMIN_EMAIL ? `set (${process.env.ADMIN_EMAIL.split('@')[0].slice(0, 3)}***)` : 'MISSING')
-        console.log('[NextAuth] env check — ADMIN_PASSWORD:', process.env.ADMIN_PASSWORD ? `set (${process.env.ADMIN_PASSWORD.length} chars)` : 'MISSING')
-        console.log('[NextAuth] env check — ADMIN_NAME:', process.env.ADMIN_NAME || 'MISSING')
-        console.log('[NextAuth] login attempt — email provided:', credentials?.email ? `${credentials.email.split('@')[0].slice(0, 3)}***@${credentials.email.split('@')[1]}` : 'none')
-
         const inputEmail = (credentials?.email || '').trim().toLowerCase()
         const inputPassword = (credentials?.password || '').trim()
         const adminEmail = (process.env.ADMIN_EMAIL || '').trim().toLowerCase()
         const adminPassword = (process.env.ADMIN_PASSWORD || '').trim()
-
-        console.log('[NextAuth] email match:', inputEmail === adminEmail, '| password match:', inputPassword === adminPassword)
 
         if (inputEmail === adminEmail && inputPassword === adminPassword) {
           return {
