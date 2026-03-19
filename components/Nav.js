@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { useRouter } from 'next/router'
+import { useSession, signOut } from 'next-auth/react'
 
 const tabs = [
   { href: '/brand-settings', label: 'Brand Settings', icon: '🎯' },
@@ -12,6 +13,7 @@ const tabs = [
 
 export default function Nav() {
   const router = useRouter()
+  const { data: session } = useSession()
 
   return (
     <header
@@ -22,15 +24,29 @@ export default function Nav() {
       <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div
-            className="w-7 h-7 flex items-center justify-center flex-shrink-0"
-            style={{ backgroundColor: '#E3001B', borderRadius: '4px' }}
+            className="flex items-center justify-center flex-shrink-0"
+            style={{ width: '28px', height: '28px', backgroundColor: '#E3001B', borderRadius: '4px' }}
           >
             <span className="text-white font-medium text-xs">C</span>
           </div>
           <span className="font-medium text-black text-sm tracking-tight">Cority Social Hub</span>
         </div>
-        <div className="text-black/40 text-xs font-[350]">
-          {new Date().toLocaleDateString('en-CA', { weekday: 'short', month: 'short', day: 'numeric' })}
+
+        <div className="flex items-center gap-5">
+          <div className="text-black/40 text-xs font-[350]">
+            {new Date().toLocaleDateString('en-CA', { weekday: 'short', month: 'short', day: 'numeric' })}
+          </div>
+          {session?.user && (
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-black/40 font-[350]">{session.user.name}</span>
+              <button
+                onClick={() => signOut({ callbackUrl: '/login' })}
+                className="text-xs text-black/40 font-[350] hover:text-black transition-colors"
+              >
+                Sign out
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -43,14 +59,9 @@ export default function Nav() {
               <Link
                 key={tab.href}
                 href={tab.href}
-                className={`
-                  flex items-center gap-1.5 px-3 py-3 text-[11px] font-medium uppercase tracking-[0.08em] whitespace-nowrap transition-colors duration-150
-                  ${isActive
-                    ? 'text-cority-red'
-                    : 'text-black/50 hover:text-black'
-                  }
-                `}
+                className="flex items-center gap-1.5 px-3 py-3 text-[11px] font-medium uppercase tracking-[0.08em] whitespace-nowrap transition-colors duration-150"
                 style={{
+                  color: isActive ? '#E3001B' : 'rgba(0,0,0,0.5)',
                   borderBottom: isActive ? '1.5px solid #E3001B' : '1.5px solid transparent',
                 }}
               >

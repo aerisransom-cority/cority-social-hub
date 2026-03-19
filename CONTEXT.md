@@ -13,7 +13,7 @@ Tech stack
 Build phases
 * Phase 1 ✅ Foundation: Nav shell + Brand Settings page (pre-loaded with Cority strategy)
 * Phase 2 ✅ Request brief form + AI copy drafting (per-platform variants, platform selector, saves to data/briefs.json)
-* Phase 3 → Auth + user permissions (NextAuth.js, 3 roles: Admin / Contributor / Reviewer), then Brainstorm chat + Content Studio (drafting, mockup builder, script drafting, editorial calendar)
+* Phase 3 ✅ Auth (NextAuth.js JWT, 3 roles: Admin / Contributor / Reviewer, login at /login, proxy.js protects all routes) + Brainstorm Chat (brand-aware multi-turn AI, saves to data/chat-history.json) + Editorial Calendar (month view, drag-to-reschedule, saves to data/calendar.json) + Media Library shell (upload photos, tag system, grid view, local storage → Cloudinary-ready via STORAGE_PROVIDER env var)
 * Phase 4 → UTM builder (enforces naming conventions) + UTM log (CSV export)
 * Phase 5 → Performance sync (XLSX upload, UTM matching, basic dashboard)
 * Phase 6 → Visual mockups (brand-templated, PNG + Figma export)
