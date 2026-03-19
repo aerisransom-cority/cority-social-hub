@@ -1,0 +1,162 @@
+{
+  "vision": "When a customer or prospect thinks about EHS+, they automatically think of Cority.",
+  "winStrategy": "Unified message + consistency + clarity + human-led, data-backed storytelling.",
+  "voicePillars": [
+    {
+      "id": "clarity",
+      "name": "Clarity",
+      "description": "Make complex EHS+ and AI topics simple and accessible (ELI5, not condescending)."
+    },
+    {
+      "id": "empathy",
+      "name": "Empathy",
+      "description": "Meet the audience where they are; they face changing regulations and expectations."
+    },
+    {
+      "id": "fact-based",
+      "name": "Fact-Based",
+      "description": "No unverifiable claims; audience is skeptical of AI — back everything with data."
+    },
+    {
+      "id": "action-oriented",
+      "name": "Action-Oriented",
+      "description": "Always offer a practical way forward, even without the Cority product."
+    }
+  ],
+  "storytellingThemes": [
+    {
+      "id": 1,
+      "theme": "Data-Driven Performance",
+      "description": "Siloed data is holding organizations back."
+    },
+    {
+      "id": 2,
+      "theme": "Applied AI",
+      "description": "Practical Cortex AI use cases, not AI as a black box."
+    },
+    {
+      "id": 3,
+      "theme": "Confident Decision-Making",
+      "description": "When health and safety are on the line."
+    },
+    {
+      "id": 4,
+      "theme": "Proactivity > Reactivity",
+      "description": "Reactive culture is costly."
+    },
+    {
+      "id": 5,
+      "theme": "Trust",
+      "description": "EHS+ builds trust between companies, communities, and regulators."
+    },
+    {
+      "id": 6,
+      "theme": "From Risk to Resilience",
+      "description": "Compliance as a resilience strategy."
+    },
+    {
+      "id": 7,
+      "theme": "EHS+ as Revenue Driver",
+      "description": "Not a cost center."
+    },
+    {
+      "id": 8,
+      "theme": "Explain WHY and HOW",
+      "description": "Give context to Cority's converged approach."
+    }
+  ],
+  "activeCampaigns": [
+    {
+      "id": "global-brand",
+      "name": "Global Brand",
+      "themes": ["Converged EHS+ and Applied AI", "IT consolidation", "Sustainable Performance Advantage", "Cortex AI"]
+    },
+    {
+      "id": "environment",
+      "name": "Environment + Sustainability",
+      "themes": ["Take Control of Your Emissions"]
+    },
+    {
+      "id": "safety",
+      "name": "Safety",
+      "themes": ["Safety is Stronger"]
+    }
+  ],
+  "alwaysOnContent": [
+    "SME thought leadership",
+    "Customer highlights",
+    "Product education",
+    "Memes and brand lore",
+    "Industry commentary",
+    "Behind-the-scenes",
+    "Events",
+    "Executive spotlights",
+    "Customer wins",
+    "Verdantix / awards"
+  ],
+  "contentPerformance": {
+    "highPerforming": [
+      "Announcements",
+      "Events with real people",
+      "Internal differentiated thought leadership",
+      "Data-led posts",
+      "Customer stories / social proof"
+    ],
+    "underPerforming": [
+      "Text-only educational posts",
+      "Reposts with thoughts",
+      "Generic community engagement posts"
+    ]
+  },
+  "platformCadence": [
+    {
+      "platform": "LinkedIn",
+      "role": "Primary",
+      "targets": [
+        "Company page: 3–5x/week",
+        "1–2 short-form vertical videos/week",
+        "1–2 carousels/week",
+        "2 memes/month"
+      ]
+    },
+    {
+      "platform": "YouTube",
+      "role": "Secondary",
+      "targets": [
+        "Shorts: ramp to 5x/week",
+        "Long-form: 2–4x/month"
+      ]
+    },
+    {
+      "platform": "Instagram",
+      "role": "Repurpose",
+      "targets": ["Repurpose existing content — pressure test ideas, boost SEO"]
+    },
+    {
+      "platform": "X (Twitter)",
+      "role": "Repurpose",
+      "targets": ["Repurpose existing content — pressure test ideas, boost SEO"]
+    },
+    {
+      "platform": "Facebook",
+      "role": "Repurpose",
+      "targets": ["Repurpose existing content — pressure test ideas, boost SEO"]
+    }
+  ],
+  "relatedClouds": [
+    "CorityOne",
+    "Health",
+    "Safety",
+    "Environmental",
+    "Sustainability",
+    "Quality",
+    "Analytics",
+    "EHS+ Converge Studio"
+  ],
+  "brandColors": {
+    "primary": "#E3001B",
+    "primaryDark": "#B8001A",
+    "primaryLight": "#FF1A35"
+  },
+  "aiSystemPrompt": "You are a social media copywriter and strategist for Cority, a leading EHS+ (Environmental, Health, Safety, and Sustainability) software company.\n\nBrand Vision: When a customer or prospect thinks about EHS+, they automatically think of Cority.\n\nHow We Win: Unified message + consistency + clarity + human-led, data-backed storytelling.\n\nVoice Pillars:\n- Clarity: Make complex EHS+ and AI topics simple and accessible. Explain Like I'm 5, but never condescending.\n- Empathy: Meet the audience where they are. They face changing regulations, board pressure, and rising expectations.\n- Fact-Based: No unverifiable claims. Our audience is skeptical of AI hype — back everything with data or real examples.\n- Action-Oriented: Always offer a practical way forward, even if it doesn't require the Cority product.\n\nStorytelling Themes (use these to frame every post):\n1. Data-driven performance — siloed data is holding orgs back\n2. Applied AI — practical Cortex AI use cases, not AI as a black box\n3. Confident decision-making — when health and safety are on the line\n4. Proactivity > reactivity — reactive culture is costly\n5. Trust — EHS+ builds trust between companies, communities, and regulators\n6. From risk to resilience — compliance as a resilience strategy\n7. EHS+ as revenue driver, not cost center\n8. Explain WHY and HOW — give context to Cority's converged approach\n\nActive H1 2026 Campaigns:\n- Global Brand: Converged EHS+ and Applied AI (IT consolidation, Sustainable Performance Advantage, Cortex AI)\n- Environment + Sustainability: Take Control of Your Emissions\n- Safety: Safety is Stronger\n\nHigh-performing content formats: Announcements, events with real people, internal thought leadership, data-led posts, customer stories.\nUnderperforming: Text-only educational posts, reposts with thoughts, generic community engagement.\n\nAlways write with confidence, specificity, and a point of view. Never generic. Never vague. Never hype without substance."
+}

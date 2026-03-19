@@ -1,0 +1,171 @@
+/* Fakt Pro — self-hosted */
+@font-face {
+  font-family: 'Fakt Pro';
+  src: url('/fonts/fakt-pro/FaktPro-Thin.otf') format('opentype');
+  font-weight: 100;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Fakt Pro';
+  src: url('/fonts/fakt-pro/FaktPro-ThinItalic.otf') format('opentype');
+  font-weight: 100;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Fakt Pro';
+  src: url('/fonts/fakt-pro/FaktPro-Light.otf') format('opentype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Fakt Pro';
+  src: url('/fonts/fakt-pro/FaktPro-LightItalic.otf') format('opentype');
+  font-weight: 300;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Fakt Pro';
+  src: url('/fonts/fakt-pro/FaktPro-Blond.otf') format('opentype');
+  font-weight: 350;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Fakt Pro';
+  src: url('/fonts/fakt-pro/FaktPro-BlondItalic.otf') format('opentype');
+  font-weight: 350;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Fakt Pro';
+  src: url('/fonts/fakt-pro/FaktPro-Normal.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Fakt Pro';
+  src: url('/fonts/fakt-pro/FaktPro-NormalItalic.otf') format('opentype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Fakt Pro';
+  src: url('/fonts/fakt-pro/FaktPro-Medium.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Fakt Pro';
+  src: url('/fonts/fakt-pro/FaktPro-MediumItalic.otf') format('opentype');
+  font-weight: 500;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Fakt Pro';
+  src: url('/fonts/fakt-pro/FaktPro-SemiBold.otf') format('opentype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Fakt Pro';
+  src: url('/fonts/fakt-pro/FaktPro-SemiBoldItalic.otf') format('opentype');
+  font-weight: 600;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Fakt Pro';
+  src: url('/fonts/fakt-pro/FaktPro-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Fakt Pro';
+  src: url('/fonts/fakt-pro/FaktPro-BoldItalic.otf') format('opentype');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-white text-black antialiased;
+    font-weight: 350;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-cority-red hover:bg-cority-red-dark text-white font-medium px-5 py-2.5 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed;
+    border-radius: 6px;
+    font-size: 13px;
+    letter-spacing: 0.01em;
+  }
+  .btn-secondary {
+    @apply bg-white text-black font-medium px-5 py-2.5 transition-colors duration-150 hover:bg-black/5;
+    border: 0.79px solid #000000;
+    border-radius: 6px;
+    font-size: 13px;
+  }
+  .card {
+    @apply bg-white;
+    border: 0.79px solid #D9D8D6;
+    border-radius: 6px;
+  }
+  .section-label {
+    display: block;
+    font-size: 9px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 1.38px;
+    color: #000000;
+    margin-bottom: 8px;
+  }
+  .input {
+    @apply w-full px-3 py-2 text-sm focus:outline-none transition bg-white text-black;
+    border: 0.79px solid #D9D8D6;
+    border-radius: 6px;
+    font-weight: 350;
+  }
+  .input:focus {
+    border-color: #E3001B;
+  }
+  .textarea {
+    @apply w-full px-3 py-2 text-sm focus:outline-none transition resize-none bg-white text-black;
+    border: 0.79px solid #D9D8D6;
+    border-radius: 6px;
+    font-weight: 350;
+  }
+  .textarea:focus {
+    border-color: #E3001B;
+  }
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 6.25px;
+    border: 0.79px solid #D9D8D6;
+    font-size: 9px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.97px;
+    color: #000000;
+    background: #ffffff;
+  }
+}
