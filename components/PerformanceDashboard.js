@@ -334,25 +334,30 @@ export default function PerformanceDashboard() {
           {/* Platform selector */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <label className="text-xs text-black/50 font-[350]" style={{ minWidth: 60 }}>Platform</label>
-            <select
-              value={upload.platform}
-              onChange={(e) => setUpload((u) => ({ ...u, platform: e.target.value, result: null, error: null }))}
-              style={{
-                border: '0.79px solid #D9D8D6',
-                borderRadius: 4,
-                padding: '6px 10px',
-                fontSize: 13,
-                fontWeight: 350,
-                background: '#fff',
-                color: '#000',
-              }}
-            >
-              <option value="linkedin">LinkedIn</option>
-              <option value="instagram">Instagram</option>
-              <option value="facebook">Facebook</option>
-              <option value="x">X (Twitter)</option>
-              <option value="youtube">YouTube</option>
-            </select>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <select
+                value={upload.platform}
+                onChange={(e) => setUpload((u) => ({ ...u, platform: e.target.value, result: null, error: null }))}
+                style={{
+                  border: '0.79px solid #D9D8D6',
+                  borderRadius: 4,
+                  padding: '6px 10px',
+                  fontSize: 13,
+                  fontWeight: 350,
+                  background: '#fff',
+                  color: '#000',
+                }}
+              >
+                <option value="linkedin">LinkedIn</option>
+                <option value="instagram" disabled>Instagram (coming soon)</option>
+                <option value="facebook" disabled>Facebook (coming soon)</option>
+                <option value="x" disabled>X / Twitter (coming soon)</option>
+                <option value="youtube" disabled>YouTube (coming soon)</option>
+              </select>
+              <span style={{ fontSize: 11, color: 'rgba(0,0,0,0.35)', fontWeight: 350 }}>
+                Additional platforms coming soon.
+              </span>
+            </div>
           </div>
 
           {/* Drop zone */}
