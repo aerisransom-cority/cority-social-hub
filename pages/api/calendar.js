@@ -9,6 +9,8 @@ function readCalendar() {
   try { return JSON.parse(fs.readFileSync(CALENDAR_PATH, 'utf-8')) } catch { return [] }
 }
 function writeCalendar(data) {
+  const dir = path.dirname(CALENDAR_PATH)
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
   fs.writeFileSync(CALENDAR_PATH, JSON.stringify(data, null, 2))
 }
 

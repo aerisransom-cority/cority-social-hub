@@ -4,6 +4,7 @@ import Anthropic from '@anthropic-ai/sdk'
 
 const BRAND_PATH = path.join(process.cwd(), 'data', 'brand-settings.json')
 const BRIEFS_PATH = path.join(process.cwd(), 'data', 'briefs.json')
+const CALENDAR_PATH = path.join(process.cwd(), 'data', 'calendar.json')
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -113,6 +114,35 @@ ${guidelines}`
       fs.writeFileSync(BRIEFS_PATH, JSON.stringify(existing, null, 2))
     } catch {
       // Non-fatal
+    }
+
+    // Sync to calendar — create a Draft entry using the brief deadline as scheduled date
+    try {
+      const PLATFORM_LABEL = { linkedin: 'LinkedIn', instagram: 'Instagram', x: 'X', facebook: 'Facebook', youtube: 'YouTube' }
+      const firstPlatform = PLATFORM_LABEL[selectedPlatforms[0]] || selectedPlatforms[0]
+      const calendarEntry = {
+        id: `brief-${brief.id}`,
+        createdAt: new Date().toISOString(),
+        title: description.length > 60 ? description.slice(0, 57) + '…' : description,
+        platform: firstPlatform,
+        contentType: 'Post',
+        scheduledDate: deadline,
+        status: 'Draft',
+        briefId: brief.id,
+        notes: `Auto-added from brief. Audience: ${audience}. Goal: ${goal}.`,
+      }
+      const dataDir = path.dirname(CALENDAR_PATH)
+      if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true })
+      let calendar = []
+      try { calendar = JSON.parse(fs.readFileSync(CALENDAR_PATH, 'utf-8')) } catch {}
+      // Avoid duplicate entries if brief is re-submitted
+      const alreadyExists = calendar.some((e) => e.briefId === brief.id)
+      if (!alreadyExists) {
+        calendar.push(calendarEntry)
+        fs.writeFileSync(CALENDAR_PATH, JSON.stringify(calendar, null, 2))
+      }
+    } catch {
+      // Non-fatal — calendar sync failure doesn't block copy generation
     }
 
     return res.status(200).json({ variants, briefId: brief.id })

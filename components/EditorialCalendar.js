@@ -33,6 +33,8 @@ export default function EditorialCalendar() {
   const [filterPlatform, setFilterPlatform] = useState('All')
   const [filterStatus, setFilterStatus] = useState('All')
   const [showForm, setShowForm] = useState(false)
+  const [saveError, setSaveError] = useState(null)
+  const [saving, setSaving] = useState(false)
   const [dragId, setDragId] = useState(null)
   const [editEntry, setEditEntry] = useState(null)
   const [form, setForm] = useState({
@@ -51,6 +53,8 @@ export default function EditorialCalendar() {
 
   async function saveEntry(e) {
     e.preventDefault()
+    setSaveError(null)
+    setSaving(true)
     const method = editEntry ? 'PATCH' : 'POST'
     const body = editEntry ? { id: editEntry.id, ...form } : form
     try {
@@ -63,9 +67,17 @@ export default function EditorialCalendar() {
         await loadEntries()
         setShowForm(false)
         setEditEntry(null)
+        setSaveError(null)
         setForm({ title: '', platform: 'LinkedIn', contentType: 'Post', scheduledDate: '', status: 'Draft', notes: '' })
+      } else {
+        const data = await res.json().catch(() => ({}))
+        setSaveError(data.error || `Save failed (${res.status}). Check that you're logged in.`)
       }
-    } catch {}
+    } catch (err) {
+      setSaveError(err.message || 'Network error — could not reach the server.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function deleteEntry(id) {
@@ -158,7 +170,7 @@ export default function EditorialCalendar() {
         </div>
         <button
           className="btn-primary text-xs"
-          onClick={() => { setEditEntry(null); setShowForm(true) }}
+          onClick={() => { setEditEntry(null); setSaveError(null); setShowForm(true) }}
         >
           + Add Entry
         </button>
@@ -244,11 +256,11 @@ export default function EditorialCalendar() {
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center"
           style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
-          onClick={(e) => { if (e.target === e.currentTarget) { setShowForm(false); setEditEntry(null) } }}>
+          onClick={(e) => { if (e.target === e.currentTarget) { setShowForm(false); setEditEntry(null); setSaveError(null) } }}>
           <div className="bg-white w-full max-w-md mx-4" style={{ borderRadius: '8px', border: '0.79px solid #D9D8D6' }}>
             <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '0.75px solid #D9D8D6' }}>
               <h3 className="font-medium text-black text-sm">{editEntry ? 'Edit Entry' : 'Add Calendar Entry'}</h3>
-              <button onClick={() => { setShowForm(false); setEditEntry(null) }} className="text-black/40 hover:text-black text-lg leading-none">×</button>
+              <button onClick={() => { setShowForm(false); setEditEntry(null); setSaveError(null) }} className="text-black/40 hover:text-black text-lg leading-none">×</button>
             </div>
             <form onSubmit={saveEntry} className="p-6 space-y-4">
               <div>
@@ -285,9 +297,15 @@ export default function EditorialCalendar() {
                 <label className="section-label">Notes</label>
                 <textarea className="textarea" rows={2} value={form.notes} onChange={(e) => setForm(f => ({ ...f, notes: e.target.value }))} />
               </div>
+              {saveError && (
+                <div className="text-sm text-cority-red font-[350] px-3 py-2"
+                  style={{ border: '0.79px solid #E3001B', borderRadius: '6px' }}>
+                  {saveError}
+                </div>
+              )}
               <div className="flex gap-3 pt-2">
-                <button type="submit" className="btn-primary flex-1">
-                  {editEntry ? 'Save Changes' : 'Add to Calendar'}
+                <button type="submit" className="btn-primary flex-1" disabled={saving}>
+                  {saving ? 'Saving…' : editEntry ? 'Save Changes' : 'Add to Calendar'}
                 </button>
                 {editEntry && (
                   <button type="button" className="btn-secondary text-cority-red text-xs px-4"
