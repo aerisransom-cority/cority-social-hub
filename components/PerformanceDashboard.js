@@ -98,6 +98,7 @@ export default function PerformanceDashboard() {
     result: null,
     error: null,
   })
+  const [dupPrompt, setDupPrompt] = useState(null) // { duplicateCount, newCount, totalIncoming }
   const [insights, setInsights] = useState({ loading: false, data: null, error: null })
 
   const fileInputRef = useRef(null)
@@ -246,16 +247,24 @@ export default function PerformanceDashboard() {
     if (file) setUpload((u) => ({ ...u, file, dragging: false, result: null, error: null }))
   }
 
-  async function handleUpload() {
+  async function handleUpload(mode = '') {
     if (!upload.file) return
     setUpload((u) => ({ ...u, uploading: true, result: null, error: null }))
+    setDupPrompt(null)
     try {
       const formData = new FormData()
       formData.append('platform', upload.platform)
       formData.append('file', upload.file)
+      if (mode) formData.append('mode', mode)
       const res = await fetch('/api/performance', { method: 'POST', body: formData })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Upload failed')
+      if (data.hasDuplicates) {
+        // Pause — show duplicate prompt, keep file in state
+        setDupPrompt(data)
+        setUpload((u) => ({ ...u, uploading: false }))
+        return
+      }
       setUpload((u) => ({ ...u, uploading: false, result: data, file: null }))
       await loadRecords()
     } catch (err) {
@@ -386,21 +395,74 @@ export default function PerformanceDashboard() {
             )}
           </div>
 
+          {/* Duplicate prompt */}
+          {dupPrompt && (
+            <div style={{
+              border: '0.79px solid rgba(211,95,11,0.4)',
+              borderRadius: 6,
+              padding: '14px 16px',
+              background: 'rgba(211,95,11,0.04)',
+            }}>
+              <p style={{ fontSize: 13, color: '#000', fontWeight: 400, margin: '0 0 12px' }}>
+                <strong>{dupPrompt.duplicateCount} post{dupPrompt.duplicateCount !== 1 ? 's' : ''}</strong> in this file already exist in your performance data.
+                {dupPrompt.newCount > 0
+                  ? ` ${dupPrompt.newCount} new post${dupPrompt.newCount !== 1 ? 's' : ''} will be imported either way.`
+                  : ' No new posts to import.'}
+              </p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  className="btn-primary"
+                  onClick={() => { setDupPrompt(null); handleUpload('override') }}
+                >
+                  Override existing
+                </button>
+                <button
+                  className="btn-secondary"
+                  onClick={() => { setDupPrompt(null); handleUpload('skip') }}
+                >
+                  Skip duplicates, import new only
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Upload button + result */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <button
-              className="btn-primary"
-              onClick={handleUpload}
-              disabled={!upload.file || upload.uploading}
-              style={{ opacity: (!upload.file || upload.uploading) ? 0.5 : 1 }}
-            >
-              {upload.uploading ? 'Importing…' : 'Import'}
-            </button>
+            {!dupPrompt && (
+              <button
+                className="btn-primary"
+                onClick={() => handleUpload()}
+                disabled={!upload.file || upload.uploading}
+                style={{ opacity: (!upload.file || upload.uploading) ? 0.5 : 1 }}
+              >
+                {upload.uploading ? 'Importing…' : 'Import'}
+              </button>
+            )}
 
             {upload.result && (
-              <span style={{ fontSize: 13, color: '#2D7D46', fontWeight: 400 }}>
-                Imported {upload.result.imported} posts. {upload.result.matched} of {upload.result.imported} matched to UTM campaigns.
-              </span>
+              <div style={{
+                display: 'flex',
+                gap: 16,
+                flexWrap: 'wrap',
+                fontSize: 13,
+                color: '#000',
+                fontWeight: 350,
+                padding: '10px 14px',
+                background: 'rgba(45,125,70,0.06)',
+                border: '0.79px solid rgba(45,125,70,0.25)',
+                borderRadius: 6,
+              }}>
+                <span style={{ color: '#2D7D46', fontWeight: 500 }}>✓ Import complete</span>
+                <span><strong>{upload.result.imported}</strong> posts imported</span>
+                <span><strong>{upload.result.matched}</strong> UTM {upload.result.matched === 1 ? 'match' : 'matches'}</span>
+                {upload.result.duplicatesSkipped > 0 && (
+                  <span><strong>{upload.result.duplicatesSkipped}</strong> duplicates skipped</span>
+                )}
+                {upload.result.duplicatesOverridden > 0 && (
+                  <span><strong>{upload.result.duplicatesOverridden}</strong> records overridden</span>
+                )}
+                <span style={{ color: 'rgba(0,0,0,0.4)' }}>{upload.result.total} total in dataset</span>
+              </div>
             )}
             {upload.error && (
               <span style={{ fontSize: 13, color: '#C0392B', fontWeight: 400 }}>{upload.error}</span>
@@ -652,7 +714,7 @@ export default function PerformanceDashboard() {
                     <td style={tdStyle}>{fmtRate(r.engagementRate)}</td>
                     <td style={tdStyle}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        {r.attributed && (
+                        {r.attributed ? (
                           <span
                             style={{
                               display: 'inline-block',
@@ -663,10 +725,27 @@ export default function PerformanceDashboard() {
                               flexShrink: 0,
                             }}
                           />
+                        ) : (
+                          <span
+                            style={{
+                              display: 'inline-block',
+                              width: 6,
+                              height: 6,
+                              borderRadius: '50%',
+                              background: '#D9D8D6',
+                              flexShrink: 0,
+                            }}
+                          />
                         )}
-                        <span title={r.matchedCampaign || ''} style={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
-                          {r.matchedCampaign || '—'}
-                        </span>
+                        {r.matchedCampaign ? (
+                          <span title={r.matchedCampaign} style={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+                            {r.matchedCampaign}
+                          </span>
+                        ) : (
+                          <span style={{ color: 'rgba(0,0,0,0.3)', fontSize: 12, fontStyle: 'italic' }}>
+                            Unattributed
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td style={tdStyle}>
@@ -674,7 +753,9 @@ export default function PerformanceDashboard() {
                         <span style={{ color: '#D35F0B', fontSize: 12 }}>
                           View brief
                         </span>
-                      ) : '—'}
+                      ) : (
+                        <span style={{ color: 'rgba(0,0,0,0.3)', fontSize: 12 }}>—</span>
+                      )}
                     </td>
                   </tr>
                 ))}

@@ -319,6 +319,23 @@ function matchUtm(record, utms, briefs) {
   return { matchedUtmId, matchedCampaign, matchedBriefId, attributed }
 }
 
+// Check if an incoming record is a duplicate of an existing one
+function isDuplicate(incoming, existing) {
+  if (incoming.platform !== existing.platform) return false
+  if (incoming.postDate && existing.postDate && incoming.postDate !== existing.postDate) return false
+  // URL match is definitive (if both have one)
+  if (incoming.postUrl && existing.postUrl && incoming.postUrl.trim() && existing.postUrl.trim()) {
+    return incoming.postUrl.trim() === existing.postUrl.trim()
+  }
+  // Title match as fallback — first 60 chars, case-insensitive
+  if (incoming.postTitle && existing.postTitle) {
+    const a = incoming.postTitle.slice(0, 60).toLowerCase().trim()
+    const b = existing.postTitle.slice(0, 60).toLowerCase().trim()
+    if (a.length > 5 && a === b) return true
+  }
+  return false
+}
+
 function computeEngagementRate(record) {
   // For platforms that have explicit engagement rate, use it
   if (record.engagementRate > 0) return record.engagementRate
@@ -355,7 +372,9 @@ export default async function handler(req, res) {
     return res.status(200).json({ cleared: true })
   }
 
-  // POST — parse multipart upload, normalize, match UTMs, append
+  // POST — parse multipart upload, normalize, match UTMs, save (with duplicate handling)
+  // Phase 1 (no mode field): parse, detect duplicates, return conflict info without saving.
+  // Phase 2 (mode=override or mode=skip): re-upload same file with user's choice, then save.
   if (req.method === 'POST') {
     const form = formidable({ keepExtensions: true, maxFileSize: 20 * 1024 * 1024 })
     let fields, files
@@ -367,6 +386,7 @@ export default async function handler(req, res) {
 
     const platform = Array.isArray(fields.platform) ? fields.platform[0] : fields.platform
     const file     = Array.isArray(files.file)      ? files.file[0]      : files.file
+    const mode     = Array.isArray(fields.mode)     ? fields.mode[0]     : (fields.mode || '')
 
     if (!platform) return res.status(400).json({ error: 'platform field is required' })
     if (!file)     return res.status(400).json({ error: 'file field is required' })
@@ -407,14 +427,69 @@ export default async function handler(req, res) {
     })
 
     const existing = readJson(TMP_PERF, SEED_PERF)
-    const combined = [...existing, ...enriched]
-    writePerf(combined)
 
-    return res.status(200).json({
-      imported: enriched.length,
-      matched,
-      total: combined.length,
-    })
+    // Phase 1: no mode — detect duplicates, do not save
+    if (!mode) {
+      const duplicateCount = enriched.filter((inc) => existing.some((ex) => isDuplicate(inc, ex))).length
+      if (duplicateCount > 0) {
+        return res.status(200).json({
+          hasDuplicates: true,
+          duplicateCount,
+          newCount: enriched.length - duplicateCount,
+          totalIncoming: enriched.length,
+        })
+      }
+      // No duplicates — save immediately
+      const combined = [...existing, ...enriched]
+      writePerf(combined)
+      return res.status(200).json({
+        imported: enriched.length,
+        matched,
+        total: combined.length,
+        duplicatesSkipped: 0,
+        duplicatesOverridden: 0,
+      })
+    }
+
+    // Phase 2a: override — replace existing duplicates, import all incoming
+    if (mode === 'override') {
+      let overridden = 0
+      const notReplaced = existing.filter((ex) => {
+        const isdup = enriched.some((inc) => isDuplicate(inc, ex))
+        if (isdup) overridden++
+        return !isdup
+      })
+      const combined = [...notReplaced, ...enriched]
+      writePerf(combined)
+      return res.status(200).json({
+        imported: enriched.length,
+        matched,
+        total: combined.length,
+        duplicatesSkipped: 0,
+        duplicatesOverridden: overridden,
+      })
+    }
+
+    // Phase 2b: skip — import only records that are not duplicates
+    if (mode === 'skip') {
+      let skipped = 0
+      const newOnly = enriched.filter((inc) => {
+        const isdup = existing.some((ex) => isDuplicate(inc, ex))
+        if (isdup) skipped++
+        return !isdup
+      })
+      const combined = [...existing, ...newOnly]
+      writePerf(combined)
+      return res.status(200).json({
+        imported: newOnly.length,
+        matched: newOnly.filter((r) => r.attributed).length,
+        total: combined.length,
+        duplicatesSkipped: skipped,
+        duplicatesOverridden: 0,
+      })
+    }
+
+    return res.status(400).json({ error: `Unknown mode: ${mode}` })
   }
 
   res.setHeader('Allow', ['GET', 'POST', 'DELETE'])
