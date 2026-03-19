@@ -34,10 +34,14 @@ export const authOptions = {
         console.log('[NextAuth] env check — ADMIN_NAME:', process.env.ADMIN_NAME || 'MISSING')
         console.log('[NextAuth] login attempt — email provided:', credentials?.email ? `${credentials.email.split('@')[0].slice(0, 3)}***@${credentials.email.split('@')[1]}` : 'none')
 
-        if (
-          credentials?.email === process.env.ADMIN_EMAIL &&
-          credentials?.password === process.env.ADMIN_PASSWORD
-        ) {
+        const inputEmail = (credentials?.email || '').trim().toLowerCase()
+        const inputPassword = (credentials?.password || '').trim()
+        const adminEmail = (process.env.ADMIN_EMAIL || '').trim().toLowerCase()
+        const adminPassword = (process.env.ADMIN_PASSWORD || '').trim()
+
+        console.log('[NextAuth] email match:', inputEmail === adminEmail, '| password match:', inputPassword === adminPassword)
+
+        if (inputEmail === adminEmail && inputPassword === adminPassword) {
           return {
             id: '1',
             email: process.env.ADMIN_EMAIL,
