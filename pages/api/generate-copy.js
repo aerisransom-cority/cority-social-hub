@@ -2,9 +2,14 @@ import fs from 'fs'
 import path from 'path'
 import Anthropic from '@anthropic-ai/sdk'
 
-const BRAND_PATH = path.join(process.cwd(), 'data', 'brand-settings.json')
-const BRIEFS_PATH = path.join(process.cwd(), 'data', 'briefs.json')
-const CALENDAR_PATH = path.join(process.cwd(), 'data', 'calendar.json')
+// Vercel's data/ directory is read-only. All writes use /tmp (writable, ephemeral).
+// Reads try /tmp first, then fall back to committed seed files in data/.
+const TMP_BRAND    = '/tmp/brand-settings.json'
+const TMP_BRIEFS   = '/tmp/briefs.json'
+const TMP_CALENDAR = '/tmp/calendar.json'
+const SEED_BRAND    = path.join(process.cwd(), 'data', 'brand-settings.json')
+const SEED_BRIEFS   = path.join(process.cwd(), 'data', 'briefs.json')
+const SEED_CALENDAR = path.join(process.cwd(), 'data', 'calendar.json')
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -23,12 +28,16 @@ export default async function handler(req, res) {
     })
   }
 
-  // Load brand settings
+  // Load brand settings — prefer /tmp (user-saved) over committed seed
   let brandSettings
   try {
-    brandSettings = JSON.parse(fs.readFileSync(BRAND_PATH, 'utf-8'))
+    brandSettings = JSON.parse(fs.readFileSync(TMP_BRAND, 'utf-8'))
   } catch {
-    return res.status(500).json({ error: 'Could not load brand settings.' })
+    try {
+      brandSettings = JSON.parse(fs.readFileSync(SEED_BRAND, 'utf-8'))
+    } catch {
+      return res.status(500).json({ error: 'Could not load brand settings.' })
+    }
   }
 
   // Use provided platforms or default to all five
@@ -107,16 +116,24 @@ ${guidelines}`
       variants,
     }
 
+    // Save brief to /tmp (Vercel's data/ is read-only; /tmp is writable)
     try {
       let existing = []
-      try { existing = JSON.parse(fs.readFileSync(BRIEFS_PATH, 'utf-8')) } catch {}
+      try { existing = JSON.parse(fs.readFileSync(TMP_BRIEFS, 'utf-8')) } catch {}
+      // If /tmp is empty, seed from committed data so existing briefs are preserved
+      if (existing.length === 0) {
+        try { existing = JSON.parse(fs.readFileSync(SEED_BRIEFS, 'utf-8')) } catch {}
+      }
       existing.unshift(brief)
-      fs.writeFileSync(BRIEFS_PATH, JSON.stringify(existing, null, 2))
+      fs.writeFileSync(TMP_BRIEFS, JSON.stringify(existing, null, 2))
     } catch {
       // Non-fatal
     }
 
-    // Sync to calendar — create a Draft entry using the brief deadline as scheduled date
+    // Sync to calendar — calendar.js mergedCalendar() will pick this up from
+    // /tmp/briefs.json, so no explicit calendar write is needed. Writing here
+    // anyway to handle the edge case where the brief write above succeeded but
+    // the calendar read happens before /tmp/briefs.json is available.
     try {
       const PLATFORM_LABEL = { linkedin: 'LinkedIn', instagram: 'Instagram', x: 'X', facebook: 'Facebook', youtube: 'YouTube' }
       const firstPlatform = PLATFORM_LABEL[selectedPlatforms[0]] || selectedPlatforms[0]
@@ -131,15 +148,15 @@ ${guidelines}`
         briefId: brief.id,
         notes: `Auto-added from brief. Audience: ${audience}. Goal: ${goal}.`,
       }
-      const dataDir = path.dirname(CALENDAR_PATH)
-      if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true })
       let calendar = []
-      try { calendar = JSON.parse(fs.readFileSync(CALENDAR_PATH, 'utf-8')) } catch {}
-      // Avoid duplicate entries if brief is re-submitted
-      const alreadyExists = calendar.some((e) => e.briefId === brief.id)
+      try { calendar = JSON.parse(fs.readFileSync(TMP_CALENDAR, 'utf-8')) } catch {}
+      if (calendar.length === 0) {
+        try { calendar = JSON.parse(fs.readFileSync(SEED_CALENDAR, 'utf-8')) } catch {}
+      }
+      const alreadyExists = calendar.some((e) => String(e.briefId) === String(brief.id))
       if (!alreadyExists) {
         calendar.push(calendarEntry)
-        fs.writeFileSync(CALENDAR_PATH, JSON.stringify(calendar, null, 2))
+        fs.writeFileSync(TMP_CALENDAR, JSON.stringify(calendar, null, 2))
       }
     } catch {
       // Non-fatal — calendar sync failure doesn't block copy generation

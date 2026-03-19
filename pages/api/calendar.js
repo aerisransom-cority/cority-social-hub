@@ -3,8 +3,13 @@ import path from 'path'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from './auth/[...nextauth]'
 
-const CALENDAR_PATH = path.join(process.cwd(), 'data', 'calendar.json')
-const BRIEFS_PATH = path.join(process.cwd(), 'data', 'briefs.json')
+// Vercel's data/ directory is read-only (build artifact). All writes go to /tmp
+// (writable, ephemeral between cold starts). Reads try /tmp first, then fall
+// back to the committed seed files in data/.
+const TMP_CALENDAR = '/tmp/calendar.json'
+const TMP_BRIEFS   = '/tmp/briefs.json'
+const SEED_CALENDAR = path.join(process.cwd(), 'data', 'calendar.json')
+const SEED_BRIEFS   = path.join(process.cwd(), 'data', 'briefs.json')
 
 const PLATFORM_LABEL = {
   linkedin: 'LinkedIn', instagram: 'Instagram',
@@ -12,12 +17,12 @@ const PLATFORM_LABEL = {
 }
 
 function readCalendar() {
-  try { return JSON.parse(fs.readFileSync(CALENDAR_PATH, 'utf-8')) } catch { return [] }
+  try { return JSON.parse(fs.readFileSync(TMP_CALENDAR, 'utf-8')) } catch {}
+  try { return JSON.parse(fs.readFileSync(SEED_CALENDAR, 'utf-8')) } catch {}
+  return []
 }
 function writeCalendar(data) {
-  const dir = path.dirname(CALENDAR_PATH)
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
-  fs.writeFileSync(CALENDAR_PATH, JSON.stringify(data, null, 2))
+  fs.writeFileSync(TMP_CALENDAR, JSON.stringify(data, null, 2))
 }
 
 // Synthesise calendar entries from briefs that don't already have an explicit entry.
@@ -25,8 +30,12 @@ function mergedCalendar() {
   const explicit = readCalendar()
   const explicitBriefIds = new Set(explicit.map((e) => String(e.briefId)).filter(Boolean))
 
+  // Read briefs from /tmp first (new submissions), fall back to committed seed
   let briefs = []
-  try { briefs = JSON.parse(fs.readFileSync(BRIEFS_PATH, 'utf-8')) } catch {}
+  try { briefs = JSON.parse(fs.readFileSync(TMP_BRIEFS, 'utf-8')) } catch {}
+  if (briefs.length === 0) {
+    try { briefs = JSON.parse(fs.readFileSync(SEED_BRIEFS, 'utf-8')) } catch {}
+  }
 
   const synthetic = briefs
     .filter((b) => b.deadline && !explicitBriefIds.has(String(b.id)))
