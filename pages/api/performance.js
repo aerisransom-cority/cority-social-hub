@@ -401,6 +401,15 @@ export default async function handler(req, res) {
     const sheetName = workbook.SheetNames[0]
     const rows      = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' })
 
+    // Debug: log raw headers so they appear in Vercel function logs
+    console.log(`[Perf import] platform=${platform} sheet="${sheetName}" rows=${rows.length} sheets=${workbook.SheetNames.join(', ')}`)
+    if (rows.length > 0) {
+      console.log('[Perf import] headers:', JSON.stringify(Object.keys(rows[0])))
+      console.log('[Perf import] row[0] sample:', JSON.stringify(rows[0]).slice(0, 400))
+    } else {
+      console.log('[Perf import] no rows found — sheet may be empty or headers-only')
+    }
+
     if (!rows.length) return res.status(400).json({ error: 'XLSX file is empty or has no data rows.' })
 
     const utms   = readJson(TMP_UTMS, SEED_UTMS)
