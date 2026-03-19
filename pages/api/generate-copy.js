@@ -10,7 +10,7 @@ export default async function handler(req, res) {
     return res.status(405).end('Method Not Allowed')
   }
 
-  const { description, deadline, audience, goal, url, suggestedCopy, clouds } = req.body
+  const { description, deadline, audience, goal, url, suggestedCopy, clouds, platforms } = req.body
 
   if (!description || !deadline || !audience || !goal) {
     return res.status(400).json({ error: 'Missing required fields.' })
@@ -30,6 +30,11 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Could not load brand settings.' })
   }
 
+  // Use provided platforms or default to all five
+  const selectedPlatforms = platforms?.length
+    ? platforms
+    : ['linkedin', 'instagram', 'x', 'facebook', 'youtube']
+
   const briefLines = [
     `Social request: ${description}`,
     `Deadline: ${deadline}`,
@@ -40,43 +45,36 @@ export default async function handler(req, res) {
     clouds?.length ? `Related Cority clouds/products: ${clouds.join(', ')}` : null,
   ].filter(Boolean)
 
+  // Build JSON template for only the selected platforms
+  const PLATFORM_SCHEMA = {
+    linkedin:  `"linkedin":  { "copy": "...", "notes": "..." }`,
+    instagram: `"instagram": { "copy": "...", "notes": "..." }`,
+    x:         `"x":         { "copy": "...", "notes": "..." }`,
+    facebook:  `"facebook":  { "copy": "...", "notes": "..." }`,
+    youtube:   `"youtube":   { "title": "...", "description": "...", "notes": "..." }`,
+  }
+
+  const PLATFORM_GUIDELINES = {
+    linkedin:  '- LinkedIn: Professional, data-forward, 150–250 words, 3–5 relevant hashtags at the end, use line breaks for scannability, strong opening hook (no "I\'m excited to share")',
+    instagram: '- Instagram: Visual-first caption, 80–120 words, 5–8 hashtags at the end, 1–2 relevant emojis, punchy CTA',
+    x:         '- X: Maximum 280 characters total including hashtags, 1–2 hashtags, direct sharp hook — every word earns its place',
+    facebook:  '- Facebook: Conversational tone, 80–130 words, 1–2 hashtags, end with a question or CTA that invites engagement',
+    youtube:   '- YouTube title: Max 60 characters, SEO-forward, no clickbait, clear value prop\n- YouTube description: 150–250 words, open with the key takeaway, include a CTA, 3–5 relevant keywords woven in naturally',
+  }
+
+  const jsonTemplate = '{\n  ' + selectedPlatforms.map((p) => PLATFORM_SCHEMA[p]).join(',\n  ') + '\n}'
+  const guidelines = selectedPlatforms.map((p) => PLATFORM_GUIDELINES[p]).join('\n')
+
   const userPrompt = `Generate platform-specific social media copy for this brief.
 
 ${briefLines.join('\n')}
 
-Return ONLY a valid JSON object — no preamble, no markdown fences, no explanation. Use this exact structure:
+Return ONLY a valid JSON object — no preamble, no markdown fences, no explanation. Include ONLY these platforms: ${selectedPlatforms.join(', ')}. Use this exact structure:
 
-{
-  "linkedin": {
-    "copy": "Full LinkedIn post here",
-    "notes": "One-line note about format choices made"
-  },
-  "instagram": {
-    "copy": "Instagram caption here",
-    "notes": "One-line note"
-  },
-  "x": {
-    "copy": "X post here",
-    "notes": "One-line note"
-  },
-  "facebook": {
-    "copy": "Facebook post here",
-    "notes": "One-line note"
-  },
-  "youtube": {
-    "title": "YouTube title here",
-    "description": "YouTube description here",
-    "notes": "One-line note"
-  }
-}
+${jsonTemplate}
 
 Platform guidelines — follow these precisely:
-- LinkedIn: Professional, data-forward, 150–250 words, 3–5 relevant hashtags at the end, use line breaks for scannability, strong opening hook (no "I'm excited to share")
-- Instagram: Visual-first caption, 80–120 words, 5–8 hashtags at the end, 1–2 relevant emojis, punchy CTA
-- X: Maximum 280 characters total including hashtags, 1–2 hashtags, direct sharp hook — every word earns its place
-- Facebook: Conversational tone, 80–130 words, 1–2 hashtags, end with a question or CTA that invites engagement
-- YouTube title: Max 60 characters, SEO-forward, no clickbait, clear value prop
-- YouTube description: 150–250 words, open with the key takeaway, include a CTA, 3–5 relevant keywords woven in naturally`
+${guidelines}`
 
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -104,6 +102,7 @@ Platform guidelines — follow these precisely:
       url: url || null,
       suggestedCopy: suggestedCopy || null,
       clouds: clouds || [],
+      platforms: selectedPlatforms,
       variants,
     }
 

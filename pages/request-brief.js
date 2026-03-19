@@ -19,6 +19,7 @@ const PLATFORMS = [
   { id: 'youtube',   label: 'YouTube',   icon: '▶️' },
 ]
 
+const ALL_PLATFORM_IDS = PLATFORMS.map((p) => p.id)
 const CHAR_LIMITS = { linkedin: 3000, instagram: 2200, x: 280, facebook: 2000 }
 
 function CharCount({ text, platform }) {
@@ -42,10 +43,7 @@ function CopyButton({ text }) {
     })
   }
   return (
-    <button
-      onClick={handleCopy}
-      className="btn-secondary text-xs px-3 py-1.5"
-    >
+    <button onClick={handleCopy} className="btn-secondary text-xs px-3 py-1.5">
       {copied ? '✓ Copied' : 'Copy'}
     </button>
   )
@@ -60,6 +58,7 @@ export default function RequestBrief() {
     url: '',
     suggestedCopy: '',
     clouds: [],
+    platforms: [...ALL_PLATFORM_IDS], // default: all selected
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -79,12 +78,23 @@ export default function RequestBrief() {
     }))
   }
 
-  async function handleSubmit(e) {
-    e.preventDefault()
+  function togglePlatform(id) {
+    setForm((f) => ({
+      ...f,
+      platforms: f.platforms.includes(id)
+        ? f.platforms.filter((p) => p !== id)
+        : [...f.platforms, id],
+    }))
+  }
+
+  async function submit() {
+    if (form.platforms.length === 0) {
+      setError('Select at least one platform.')
+      return
+    }
     setLoading(true)
     setError(null)
     setResult(null)
-
     try {
       const res = await fetch('/api/generate-copy', {
         method: 'POST',
@@ -94,7 +104,9 @@ export default function RequestBrief() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Something went wrong.')
       setResult(data)
-      setActiveTab('linkedin')
+      // Set active tab to first selected platform that has a result
+      const firstTab = PLATFORMS.find((p) => data.variants?.[p.id])?.id || 'linkedin'
+      setActiveTab(firstTab)
       setTimeout(() => {
         document.getElementById('results-section')?.scrollIntoView({ behavior: 'smooth' })
       }, 100)
@@ -105,25 +117,17 @@ export default function RequestBrief() {
     }
   }
 
-  async function handleRegenerate() {
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await fetch('/api/generate-copy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Something went wrong.')
-      setResult(data)
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
+  function handleSubmit(e) {
+    e.preventDefault()
+    submit()
   }
 
+  function handleRegenerate() {
+    submit()
+  }
+
+  // Only show tabs for platforms that have results
+  const resultPlatforms = PLATFORMS.filter((p) => result?.variants?.[p.id])
   const activePlatform = PLATFORMS.find((p) => p.id === activeTab)
   const activeVariant = result?.variants?.[activeTab]
 
@@ -134,7 +138,7 @@ export default function RequestBrief() {
         <div>
           <h1 className="text-3xl text-black font-[350] leading-tight">Request Brief</h1>
           <p className="text-sm text-black/50 mt-1 font-[350]">
-            Describe your social request and get AI-drafted copy for every platform.
+            Describe your social request and get AI-drafted copy for your selected platforms.
           </p>
         </div>
       </div>
@@ -222,6 +226,31 @@ export default function RequestBrief() {
             </div>
 
             <div>
+              <label className="section-label">Platforms <span className="text-cority-red">*</span></label>
+              <div className="flex flex-wrap gap-2">
+                {PLATFORMS.map((p) => {
+                  const selected = form.platforms.includes(p.id)
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => togglePlatform(p.id)}
+                      className="tag transition-colors"
+                      style={{
+                        backgroundColor: selected ? '#E3001B' : '#ffffff',
+                        color: selected ? '#ffffff' : '#000000',
+                        borderColor: selected ? '#E3001B' : '#D9D8D6',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {p.icon} {p.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div>
               <label className="section-label">Related Cloud / Product</label>
               <div className="flex flex-wrap gap-2">
                 {CLOUDS.map((cloud) => {
@@ -270,11 +299,7 @@ export default function RequestBrief() {
           {!result && !loading && (
             <div
               className="flex flex-col items-center justify-center text-center"
-              style={{
-                border: '0.79px dashed #D9D8D6',
-                borderRadius: '6px',
-                padding: '80px 40px',
-              }}
+              style={{ border: '0.79px dashed #D9D8D6', borderRadius: '6px', padding: '80px 40px' }}
             >
               <div className="text-4xl mb-4">✨</div>
               <p className="text-sm font-medium text-black mb-1">Copy will appear here</p>
@@ -287,16 +312,12 @@ export default function RequestBrief() {
           {loading && (
             <div
               className="flex flex-col items-center justify-center text-center"
-              style={{
-                border: '0.79px solid #D9D8D6',
-                borderRadius: '6px',
-                padding: '80px 40px',
-              }}
+              style={{ border: '0.79px solid #D9D8D6', borderRadius: '6px', padding: '80px 40px' }}
             >
-              <div className="text-4xl mb-4" style={{ animation: 'pulse 1.5s infinite' }}>⏳</div>
+              <div className="text-4xl mb-4">⏳</div>
               <p className="text-sm font-medium text-black mb-1">Drafting copy…</p>
               <p className="text-sm text-black/40 font-[350]">
-                Claude is writing 5 platform variants anchored to Cority brand strategy.
+                Claude is writing {form.platforms.length} platform variant{form.platforms.length !== 1 ? 's' : ''} anchored to Cority brand strategy.
               </p>
             </div>
           )}
@@ -314,25 +335,18 @@ export default function RequestBrief() {
                     Select a platform to review and copy.
                   </p>
                 </div>
-                <button
-                  onClick={handleRegenerate}
-                  className="btn-secondary text-xs"
-                  disabled={loading}
-                >
+                <button onClick={handleRegenerate} className="btn-secondary text-xs" disabled={loading}>
                   Regenerate
                 </button>
               </div>
 
-              {/* Platform tabs */}
-              <div
-                className="flex overflow-x-auto"
-                style={{ borderBottom: '0.75px solid #D9D8D6' }}
-              >
-                {PLATFORMS.map((p) => (
+              {/* Platform tabs — only show selected platforms */}
+              <div className="flex overflow-x-auto" style={{ borderBottom: '0.75px solid #D9D8D6' }}>
+                {resultPlatforms.map((p) => (
                   <button
                     key={p.id}
                     onClick={() => setActiveTab(p.id)}
-                    className={`flex items-center gap-1.5 px-4 py-3 text-[11px] font-medium uppercase tracking-[0.08em] whitespace-nowrap transition-colors`}
+                    className="flex items-center gap-1.5 px-4 py-3 text-[11px] font-medium uppercase tracking-[0.08em] whitespace-nowrap transition-colors"
                     style={{
                       color: activeTab === p.id ? '#E3001B' : 'rgba(0,0,0,0.4)',
                       borderBottom: activeTab === p.id ? '1.5px solid #E3001B' : '1.5px solid transparent',
@@ -348,7 +362,6 @@ export default function RequestBrief() {
               <div className="p-6 space-y-5">
                 {activeTab === 'youtube' && activeVariant ? (
                   <>
-                    {/* YouTube title */}
                     <div>
                       <div className="flex items-center justify-between mb-2">
                         <label className="section-label" style={{ marginBottom: 0 }}>Title</label>
@@ -367,7 +380,6 @@ export default function RequestBrief() {
                       </div>
                     </div>
 
-                    {/* YouTube description */}
                     <div>
                       <div className="flex items-center justify-between mb-2">
                         <label className="section-label" style={{ marginBottom: 0 }}>Description</label>
@@ -406,12 +418,8 @@ export default function RequestBrief() {
                   <p className="text-sm text-black/40 font-[350]">No copy available for this platform.</p>
                 )}
 
-                {/* Notes */}
                 {activeVariant?.notes && (
-                  <div
-                    className="px-4 py-3"
-                    style={{ border: '0.79px solid #D9D8D6', borderRadius: '6px' }}
-                  >
+                  <div className="px-4 py-3" style={{ border: '0.79px solid #D9D8D6', borderRadius: '6px' }}>
                     <span className="section-label" style={{ marginBottom: '4px', display: 'block' }}>Format note</span>
                     <p className="text-xs text-black/50 font-[350] leading-relaxed">{activeVariant.notes}</p>
                   </div>
