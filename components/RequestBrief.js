@@ -1,14 +1,9 @@
 import { useState } from 'react'
+import { SearchableSelect, CAMPAIGNS, CONTENT_TYPES_UTM } from './UTMBuilder'
 
 const CLOUDS = [
-  'CorityOne',
-  'Health',
-  'Safety',
-  'Environmental',
-  'Sustainability',
-  'Quality',
-  'Analytics',
-  'EHS+ Converge Studio',
+  'CorityOne', 'Health', 'Safety', 'Environmental',
+  'Sustainability', 'Quality', 'Analytics', 'EHS+ Converge Studio',
 ]
 
 const PLATFORMS = [
@@ -21,6 +16,35 @@ const PLATFORMS = [
 
 const ALL_PLATFORM_IDS = PLATFORMS.map((p) => p.id)
 const CHAR_LIMITS = { linkedin: 3000, instagram: 2200, x: 280, facebook: 2000 }
+
+// Platform → UTM source
+const UTM_SOURCE = {
+  linkedin: 'linkedin', instagram: 'instagram',
+  x: 'twitter', facebook: 'facebook', youtube: 'youtube',
+}
+
+// Build a UTM-tagged URL for a single platform
+function buildPlatformUtm(baseUrl, { utmCampaign, utmContent, utmTerm, utmIsPromoted }, platformId) {
+  if (!baseUrl) return null
+  const source = UTM_SOURCE[platformId]
+  if (!source) return null
+  const medium = (platformId === 'linkedin' && utmIsPromoted) ? 'pp' : 'social'
+  try {
+    const url = new URL(baseUrl)
+    url.searchParams.set('utm_source', source)
+    url.searchParams.set('utm_medium', medium)
+    if (utmCampaign) url.searchParams.set('utm_campaign', utmCampaign.toLowerCase())
+    if (utmContent)  url.searchParams.set('utm_content',  utmContent.toLowerCase())
+    if (utmTerm)     url.searchParams.set('utm_term', utmTerm.toLowerCase().replace(/\s+/g, '-'))
+    return url.toString()
+  } catch {
+    const parts = [`utm_source=${source}`, `utm_medium=${medium}`]
+    if (utmCampaign) parts.push(`utm_campaign=${utmCampaign.toLowerCase()}`)
+    if (utmContent)  parts.push(`utm_content=${utmContent.toLowerCase()}`)
+    if (utmTerm)     parts.push(`utm_term=${utmTerm.toLowerCase().replace(/\s+/g, '-')}`)
+    return `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}${parts.join('&')}`
+  }
+}
 
 function CharCount({ text, platform }) {
   const count = text?.length || 0
@@ -59,11 +83,17 @@ export default function RequestBrief() {
     suggestedCopy: '',
     clouds: [],
     platforms: [...ALL_PLATFORM_IDS],
+    // UTM fields
+    utmCampaign: '',
+    utmContent: '',
+    utmTerm: '',
+    utmIsPromoted: false,
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [result, setResult] = useState(null)
   const [activeTab, setActiveTab] = useState('linkedin')
+  const [platformUtms, setPlatformUtms] = useState({}) // { linkedin: url, instagram: url, ... }
 
   function handleField(field, value) {
     setForm((f) => ({ ...f, [field]: value }))
@@ -95,17 +125,60 @@ export default function RequestBrief() {
     setLoading(true)
     setError(null)
     setResult(null)
+    setPlatformUtms({})
     try {
       const res = await fetch('/api/generate-copy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          description: form.description,
+          deadline: form.deadline,
+          audience: form.audience,
+          goal: form.goal,
+          url: form.url || null,
+          suggestedCopy: form.suggestedCopy || null,
+          clouds: form.clouds,
+          platforms: form.platforms,
+        }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Something went wrong.')
       setResult(data)
       const firstTab = PLATFORMS.find((p) => data.variants?.[p.id])?.id || 'linkedin'
       setActiveTab(firstTab)
+
+      // Build per-platform UTM URLs and auto-save to log
+      if (form.url) {
+        const utms = {}
+        for (const platformId of Object.keys(data.variants || {})) {
+          const utmUrl = buildPlatformUtm(form.url, form, platformId)
+          if (utmUrl) utms[platformId] = utmUrl
+        }
+        setPlatformUtms(utms)
+
+        // Auto-save each platform's UTM to the log (fire-and-forget)
+        for (const [platformId, fullUrl] of Object.entries(utms)) {
+          const source = UTM_SOURCE[platformId]
+          const medium = (platformId === 'linkedin' && form.utmIsPromoted) ? 'pp' : 'social'
+          if (form.utmCampaign && form.utmContent) {
+            fetch('/api/utms', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                baseUrl: form.url,
+                source,
+                medium,
+                campaign: form.utmCampaign.toLowerCase(),
+                content: form.utmContent.toLowerCase(),
+                term: form.utmTerm ? form.utmTerm.toLowerCase().replace(/\s+/g, '-') : null,
+                briefId: data.briefId || null,
+                fullUrl,
+              }),
+            }).catch(() => {})
+          }
+        }
+      }
+
       setTimeout(() => {
         document.getElementById('results-section')?.scrollIntoView({ behavior: 'smooth' })
       }, 100)
@@ -128,6 +201,7 @@ export default function RequestBrief() {
   const resultPlatforms = PLATFORMS.filter((p) => result?.variants?.[p.id])
   const activePlatform = PLATFORMS.find((p) => p.id === activeTab)
   const activeVariant = result?.variants?.[activeTab]
+  const activeUtmUrl = platformUtms[activeTab]
 
   return (
     <div className="flex gap-8 items-start">
@@ -142,7 +216,7 @@ export default function RequestBrief() {
             <textarea
               className="textarea"
               rows={4}
-              placeholder="e.g. Announce our new Cortex AI incident prediction feature targeting EHS managers in manufacturing..."
+              placeholder="e.g. Announce our new Cortex AI incident prediction feature targeting EHS managers in manufacturing…"
               value={form.description}
               onChange={(e) => handleField('description', e.target.value)}
               required
@@ -191,22 +265,11 @@ export default function RequestBrief() {
           </div>
 
           <div>
-            <label className="section-label">URL to include</label>
-            <input
-              type="url"
-              className="input"
-              placeholder="https://"
-              value={form.url}
-              onChange={(e) => handleField('url', e.target.value)}
-            />
-          </div>
-
-          <div>
             <label className="section-label">Suggested copy or angle</label>
             <textarea
               className="textarea"
               rows={3}
-              placeholder="Paste any existing copy, talking points, or a direction you want to explore..."
+              placeholder="Paste any existing copy, talking points, or a direction you want to explore…"
               value={form.suggestedCopy}
               onChange={(e) => handleField('suggestedCopy', e.target.value)}
             />
@@ -259,6 +322,74 @@ export default function RequestBrief() {
                   </button>
                 )
               })}
+            </div>
+          </div>
+
+          {/* ── URL + UTM section ── */}
+          <div className="space-y-3">
+            <div>
+              <label className="section-label">URL to include</label>
+              <input
+                type="url"
+                className="input"
+                placeholder="https://"
+                value={form.url}
+                onChange={(e) => handleField('url', e.target.value)}
+              />
+            </div>
+
+            {/* UTM fields — always visible, optional */}
+            <div
+              className="space-y-3 pt-3"
+              style={{ borderTop: '0.75px solid #D9D8D6' }}
+            >
+              <p className="text-[9px] font-medium uppercase tracking-[1.38px] text-black/40">
+                UTM Tracking <span className="normal-case font-[350]">— source &amp; medium auto-assigned per platform</span>
+              </p>
+
+              <div>
+                <label className="section-label">utm_campaign</label>
+                <SearchableSelect
+                  options={CAMPAIGNS}
+                  value={form.utmCampaign}
+                  onChange={(v) => handleField('utmCampaign', v)}
+                  placeholder="Search campaigns…"
+                />
+              </div>
+
+              <div>
+                <label className="section-label">utm_content</label>
+                <select
+                  className="input"
+                  value={form.utmContent}
+                  onChange={(e) => handleField('utmContent', e.target.value)}
+                >
+                  <option value="">— select content type —</option>
+                  {CONTENT_TYPES_UTM.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="section-label">utm_term <span className="text-black/40 normal-case">(optional)</span></label>
+                <input
+                  className="input"
+                  placeholder="e.g. safety, cortex-ai, ehs-manager"
+                  value={form.utmTerm}
+                  onChange={(e) => handleField('utmTerm', e.target.value)}
+                />
+              </div>
+
+              <label className="flex items-center gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.utmIsPromoted}
+                  onChange={(e) => handleField('utmIsPromoted', e.target.checked)}
+                  className="w-3.5 h-3.5 accent-cority-red"
+                />
+                <span className="text-xs text-black/60 font-[350]">
+                  Promoted post — LinkedIn gets <code className="text-[10px] bg-black/5 px-1 rounded">utm_medium=pp</code>
+                </span>
+              </label>
             </div>
           </div>
 
@@ -400,6 +531,20 @@ export default function RequestBrief() {
                 </div>
               ) : (
                 <p className="text-sm text-black/40 font-[350]">No copy available for this platform.</p>
+              )}
+
+              {/* Per-platform UTM URL */}
+              {activeUtmUrl && (
+                <div
+                  className="flex items-start justify-between gap-4 p-4"
+                  style={{ border: '0.79px solid #D9D8D6', borderRadius: '6px', background: '#fafafa' }}
+                >
+                  <div className="min-w-0">
+                    <p className="section-label mb-1" style={{ marginBottom: '4px' }}>UTM-tagged URL</p>
+                    <p className="text-xs text-black/50 font-mono font-[350] break-all leading-relaxed">{activeUtmUrl}</p>
+                  </div>
+                  <CopyButton text={activeUtmUrl} />
+                </div>
               )}
 
               {activeVariant?.notes && (

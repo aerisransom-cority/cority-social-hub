@@ -14,7 +14,7 @@ Build phases
 * Phase 1 ✅ Foundation: Nav shell + Brand Settings page (pre-loaded with Cority strategy)
 * Phase 2 ✅ Request brief form + AI copy drafting (per-platform variants, platform selector, saves to data/briefs.json)
 * Phase 3 ✅ Auth (NextAuth.js JWT, 3 roles: Admin / Contributor / Reviewer, login at /login, proxy.js protects all routes) + Brainstorm Chat (brand-aware multi-turn AI, saves to data/chat-history.json) + Editorial Calendar (month view, drag-to-reschedule, saves to data/calendar.json) + Media Library shell (upload photos, tag system, grid view, local storage → Cloudinary-ready via STORAGE_PROVIDER env var)
-* Phase 4 → UTM builder (enforces naming conventions) + UTM log (CSV export)
+* Phase 4 ✅ UTM builder (enforces naming conventions, searchable campaign dropdown, source/medium filtered by platform, live preview) + UTM log (filterable table, CSV export) + inline UTM integration in Process Request form with per-platform UTM URLs auto-generated and saved
 * Phase 5 → Performance sync (XLSX upload, UTM matching, basic dashboard)
 * Phase 6 → Visual mockups (brand-templated, PNG + Figma export)
 * Phase 7 → Proactive post suggestions (AI surfaces ideas from strategy + performance)
@@ -89,6 +89,6 @@ Content formats in scope
 * Instagram / X / Facebook: repurposed from LinkedIn/YouTube
 * Scripts: Field Notes format (SME interview), Shorts scripts, long-form outlines
 Design notes
-* Brand color: Cority orange #D35F0B
+* Brand color: Cority orange #D35F0B. Font: Fakt Pro (self-hosted OTF, 14 weights)
 * Figma export: graphics should be structured as HTML/CSS so they can be copied or exported cleanly
 * File persistence: save/load as JSON in the project's /data folder; CSV export for UTMs and performance
