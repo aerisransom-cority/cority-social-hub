@@ -5,7 +5,7 @@ export default function Home() {
   const router = useRouter()
 
   useEffect(() => {
-    router.replace('/brand-settings')
+    router.replace('/content-studio')
   }, [router])
 
   return null

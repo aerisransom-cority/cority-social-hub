@@ -3,12 +3,9 @@ import { useRouter } from 'next/router'
 import { useSession, signOut } from 'next-auth/react'
 
 const tabs = [
-  { href: '/brand-settings', label: 'Brand Settings', icon: '🎯' },
-  { href: '/request-brief', label: 'Request Brief', icon: '📋' },
   { href: '/content-studio', label: 'Content Studio', icon: '✍️' },
-  { href: '/utm-builder', label: 'UTM Builder', icon: '🔗' },
-  { href: '/performance', label: 'Performance', icon: '📊' },
-  { href: '/post-ideas', label: 'Post Ideas', icon: '💡' },
+  { href: '/performance',    label: 'Performance',    icon: '📊' },
+  { href: '/brand-settings', label: 'Brand Settings', icon: '🎯' },
 ]
 
 export default function Nav() {
