@@ -17,9 +17,9 @@ const PLATFORMS = [
 const ALL_PLATFORM_IDS = PLATFORMS.map((p) => p.id)
 const CHAR_LIMITS = { linkedin: 3000, instagram: 2200, x: 280, facebook: 2000 }
 
-// Platform → UTM source
+// Platform → UTM source (instagram excluded — no clickable links in captions)
 const UTM_SOURCE = {
-  linkedin: 'linkedin', instagram: 'instagram',
+  linkedin: 'linkedin',
   x: 'twitter', facebook: 'facebook', youtube: 'youtube',
 }
 
@@ -343,9 +343,19 @@ export default function RequestBrief() {
               className="space-y-3 pt-3"
               style={{ borderTop: '0.75px solid #D9D8D6' }}
             >
-              <p className="text-[9px] font-medium uppercase tracking-[1.38px] text-black/40">
-                UTM Tracking <span className="normal-case font-[350]">— source &amp; medium auto-assigned per platform</span>
-              </p>
+              <div className="flex items-center justify-between">
+                <p className="text-[9px] font-medium uppercase tracking-[1.38px] text-black/40">
+                  UTM Tracking <span className="normal-case font-[350]">— source &amp; medium auto-assigned per platform</span>
+                </p>
+                <a
+                  href="/utm-guide.pdf"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[10px] text-black/40 hover:text-black font-[350] transition-colors underline"
+                >
+                  View UTM guide
+                </a>
+              </div>
 
               <div>
                 <label className="section-label">utm_campaign</label>
@@ -533,8 +543,15 @@ export default function RequestBrief() {
                 <p className="text-sm text-black/40 font-[350]">No copy available for this platform.</p>
               )}
 
-              {/* Per-platform UTM URL */}
-              {activeUtmUrl && (
+              {/* Per-platform UTM URL — Instagram shows bio note instead */}
+              {activeTab === 'instagram' ? (
+                <div
+                  className="px-4 py-3 text-xs text-black/50 font-[350]"
+                  style={{ border: '0.79px solid #D9D8D6', borderRadius: '6px', background: '#fafafa' }}
+                >
+                  Instagram does not support clickable links in captions. Add your link to your bio or use a link-in-bio tool.
+                </div>
+              ) : activeUtmUrl ? (
                 <div
                   className="flex items-start justify-between gap-4 p-4"
                   style={{ border: '0.79px solid #D9D8D6', borderRadius: '6px', background: '#fafafa' }}
@@ -545,7 +562,7 @@ export default function RequestBrief() {
                   </div>
                   <CopyButton text={activeUtmUrl} />
                 </div>
-              )}
+              ) : null}
 
               {activeVariant?.notes && (
                 <div className="px-4 py-3" style={{ border: '0.79px solid #D9D8D6', borderRadius: '6px' }}>

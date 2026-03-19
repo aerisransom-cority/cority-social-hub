@@ -79,6 +79,8 @@ export default async function handler(req, res) {
 
 ${briefLines.join('\n')}
 
+Important: Do NOT include any URLs or links in the post copy itself. URLs will be added separately as UTM-tagged links — keep copy clean of any http/https links.
+
 Return ONLY a valid JSON object — no preamble, no markdown fences, no explanation. Include ONLY these platforms: ${selectedPlatforms.join(', ')}. Use this exact structure:
 
 ${jsonTemplate}
