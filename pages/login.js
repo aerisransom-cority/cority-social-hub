@@ -43,7 +43,7 @@ export default function Login() {
           style={{
             width: '40px',
             height: '40px',
-            backgroundColor: '#E3001B',
+            backgroundColor: '#D35F0B',
             borderRadius: '8px',
           }}
         >
@@ -89,7 +89,7 @@ export default function Login() {
           {error && (
             <div
               className="text-sm text-cority-red font-[350] px-3 py-2"
-              style={{ border: '0.79px solid #E3001B', borderRadius: '6px' }}
+              style={{ border: '0.79px solid #D35F0B', borderRadius: '6px' }}
             >
               {error}
             </div>

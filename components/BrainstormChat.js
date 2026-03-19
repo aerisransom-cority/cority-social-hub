@@ -16,7 +16,7 @@ function Message({ msg }) {
       {!isUser && (
         <div
           className="flex-shrink-0 w-6 h-6 flex items-center justify-center mr-2 mt-0.5"
-          style={{ backgroundColor: '#E3001B', borderRadius: '4px' }}
+          style={{ backgroundColor: '#D35F0B', borderRadius: '4px' }}
         >
           <span className="text-white text-[9px] font-medium">AI</span>
         </div>
@@ -128,7 +128,7 @@ export default function BrainstormChat() {
               <div className="flex justify-start mb-4">
                 <div
                   className="flex-shrink-0 w-6 h-6 flex items-center justify-center mr-2 mt-0.5"
-                  style={{ backgroundColor: '#E3001B', borderRadius: '4px' }}
+                  style={{ backgroundColor: '#D35F0B', borderRadius: '4px' }}
                 >
                   <span className="text-white text-[9px] font-medium">AI</span>
                 </div>
@@ -147,7 +147,7 @@ export default function BrainstormChat() {
 
       {error && (
         <div className="mx-6 mb-3 px-3 py-2 text-xs text-cority-red font-[350]"
-          style={{ border: '0.79px solid #E3001B', borderRadius: '6px' }}>
+          style={{ border: '0.79px solid #D35F0B', borderRadius: '6px' }}>
           {error}
         </div>
       )}

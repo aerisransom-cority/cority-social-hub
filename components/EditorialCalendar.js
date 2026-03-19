@@ -428,7 +428,7 @@ export default function EditorialCalendar() {
                   className="text-xs font-medium w-5 h-5 flex items-center justify-center"
                   style={{
                     borderRadius: '50%',
-                    backgroundColor: isToday ? '#E3001B' : 'transparent',
+                    backgroundColor: isToday ? '#D35F0B' : 'transparent',
                     color: isToday ? '#ffffff' : 'rgba(0,0,0,0.6)',
                   }}
                 >
@@ -548,8 +548,8 @@ export default function EditorialCalendar() {
                           onClick={() => setActiveCopyTab(key)}
                           className="px-5 py-3 text-[11px] font-medium uppercase tracking-[0.08em] whitespace-nowrap transition-colors"
                           style={{
-                            color: activeCopyTab === key ? '#E3001B' : 'rgba(0,0,0,0.4)',
-                            borderBottom: activeCopyTab === key ? '1.5px solid #E3001B' : '1.5px solid transparent',
+                            color: activeCopyTab === key ? '#D35F0B' : 'rgba(0,0,0,0.4)',
+                            borderBottom: activeCopyTab === key ? '1.5px solid #D35F0B' : '1.5px solid transparent',
                           }}
                         >
                           {PLATFORM_LABEL[key] || key}
@@ -692,7 +692,7 @@ export default function EditorialCalendar() {
               {saveError && (
                 <div
                   className="text-sm text-cority-red font-[350] px-3 py-2"
-                  style={{ border: '0.79px solid #E3001B', borderRadius: '6px' }}
+                  style={{ border: '0.79px solid #D35F0B', borderRadius: '6px' }}
                 >
                   {saveError}
                 </div>
@@ -705,7 +705,7 @@ export default function EditorialCalendar() {
                   <button
                     type="button"
                     className="btn-secondary text-cority-red text-xs px-4"
-                    style={{ borderColor: '#E3001B' }}
+                    style={{ borderColor: '#D35F0B' }}
                     onClick={() => { deleteEntry(editEntry.id); setShowForm(false); setEditEntry(null); setDetailEntry(null) }}
                   >
                     Delete

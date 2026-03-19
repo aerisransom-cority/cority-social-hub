@@ -69,17 +69,26 @@
     {
       "id": "global-brand",
       "name": "Global Brand",
-      "themes": ["Converged EHS+ and Applied AI", "IT consolidation", "Sustainable Performance Advantage", "Cortex AI"]
+      "themes": [
+        "Converged EHS+ and Applied AI",
+        "IT consolidation",
+        "Sustainable Performance Advantage",
+        "Cortex AI"
+      ]
     },
     {
       "id": "environment",
       "name": "Environment + Sustainability",
-      "themes": ["Take Control of Your Emissions"]
+      "themes": [
+        "Take Control of Your Emissions"
+      ]
     },
     {
       "id": "safety",
       "name": "Safety",
-      "themes": ["Safety is Stronger"]
+      "themes": [
+        "Safety is Stronger"
+      ]
     }
   ],
   "alwaysOnContent": [
@@ -130,17 +139,23 @@
     {
       "platform": "Instagram",
       "role": "Repurpose",
-      "targets": ["Repurpose existing content — pressure test ideas, boost SEO"]
+      "targets": [
+        "Repurpose existing content — pressure test ideas, boost SEO"
+      ]
     },
     {
       "platform": "X (Twitter)",
       "role": "Repurpose",
-      "targets": ["Repurpose existing content — pressure test ideas, boost SEO"]
+      "targets": [
+        "Repurpose existing content — pressure test ideas, boost SEO"
+      ]
     },
     {
       "platform": "Facebook",
       "role": "Repurpose",
-      "targets": ["Repurpose existing content — pressure test ideas, boost SEO"]
+      "targets": [
+        "Repurpose existing content — pressure test ideas, boost SEO"
+      ]
     }
   ],
   "relatedClouds": [
@@ -154,7 +169,7 @@
     "EHS+ Converge Studio"
   ],
   "brandColors": {
-    "primary": "#E3001B",
+    "primary": "#D35F0B",
     "primaryDark": "#B8001A",
     "primaryLight": "#FF1A35"
   },

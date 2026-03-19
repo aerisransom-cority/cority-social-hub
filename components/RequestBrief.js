@@ -224,9 +224,9 @@ export default function RequestBrief() {
                     onClick={() => togglePlatform(p.id)}
                     className="tag transition-colors"
                     style={{
-                      backgroundColor: selected ? '#E3001B' : '#ffffff',
+                      backgroundColor: selected ? '#D35F0B' : '#ffffff',
                       color: selected ? '#ffffff' : '#000000',
-                      borderColor: selected ? '#E3001B' : '#D9D8D6',
+                      borderColor: selected ? '#D35F0B' : '#D9D8D6',
                       cursor: 'pointer',
                     }}
                   >
@@ -249,9 +249,9 @@ export default function RequestBrief() {
                     onClick={() => toggleCloud(cloud)}
                     className="tag transition-colors"
                     style={{
-                      backgroundColor: selected ? '#E3001B' : '#ffffff',
+                      backgroundColor: selected ? '#D35F0B' : '#ffffff',
                       color: selected ? '#ffffff' : '#000000',
-                      borderColor: selected ? '#E3001B' : '#D9D8D6',
+                      borderColor: selected ? '#D35F0B' : '#D9D8D6',
                       cursor: 'pointer',
                     }}
                   >
@@ -265,7 +265,7 @@ export default function RequestBrief() {
           {error && (
             <div
               className="text-sm text-cority-red font-[350] p-3"
-              style={{ border: '0.79px solid #E3001B', borderRadius: '6px' }}
+              style={{ border: '0.79px solid #D35F0B', borderRadius: '6px' }}
             >
               {error}
             </div>
@@ -333,8 +333,8 @@ export default function RequestBrief() {
                   onClick={() => setActiveTab(p.id)}
                   className="flex items-center gap-1.5 px-4 py-3 text-[11px] font-medium uppercase tracking-[0.08em] whitespace-nowrap transition-colors"
                   style={{
-                    color: activeTab === p.id ? '#E3001B' : 'rgba(0,0,0,0.4)',
-                    borderBottom: activeTab === p.id ? '1.5px solid #E3001B' : '1.5px solid transparent',
+                    color: activeTab === p.id ? '#D35F0B' : 'rgba(0,0,0,0.4)',
+                    borderBottom: activeTab === p.id ? '1.5px solid #D35F0B' : '1.5px solid transparent',
                   }}
                 >
                   <span className="text-sm">{p.icon}</span>

@@ -8,7 +8,7 @@ module.exports = {
     extend: {
       colors: {
         cority: {
-          red: '#E3001B',
+          red: '#D35F0B',
           'red-dark': '#B8001A',
           orange: '#D35F0B',
           green: '#49763E',

@@ -89,6 +89,6 @@ Content formats in scope
 * Instagram / X / Facebook: repurposed from LinkedIn/YouTube
 * Scripts: Field Notes format (SME interview), Shorts scripts, long-form outlines
 Design notes
-* Brand color: Cority red #E3001B
+* Brand color: Cority orange #D35F0B
 * Figma export: graphics should be structured as HTML/CSS so they can be copied or exported cleanly
 * File persistence: save/load as JSON in the project's /data folder; CSV export for UTMs and performance

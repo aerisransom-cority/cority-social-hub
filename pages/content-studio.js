@@ -75,14 +75,14 @@ export default function ContentStudio() {
                     borderRadius: '5px',
                     backgroundColor: isActive ? '#ffffff' : 'transparent',
                     border: isActive ? '0.79px solid #D9D8D6' : '0.79px solid transparent',
-                    color: isActive ? '#E3001B' : 'rgba(0,0,0,0.5)',
+                    color: isActive ? '#D35F0B' : 'rgba(0,0,0,0.5)',
                     boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
                   }}
                 >
                   <span className="text-sm leading-none flex-shrink-0">{section.icon}</span>
                   <span
                     className="text-[11px] font-medium uppercase tracking-[0.08em] leading-tight"
-                    style={{ color: isActive ? '#E3001B' : 'rgba(0,0,0,0.5)' }}
+                    style={{ color: isActive ? '#D35F0B' : 'rgba(0,0,0,0.5)' }}
                   >
                     {section.label}
                   </span>

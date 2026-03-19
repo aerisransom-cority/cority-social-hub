@@ -132,7 +132,7 @@ export default function BrandSettings() {
                     : 'text-black/50 hover:text-black'
                 }`}
                 style={{
-                  borderLeft: activeSection === s.id ? '1.5px solid #E3001B' : '1.5px solid transparent',
+                  borderLeft: activeSection === s.id ? '1.5px solid #D35F0B' : '1.5px solid transparent',
                   paddingLeft: '10px',
                 }}
               >
@@ -188,7 +188,7 @@ export default function BrandSettings() {
                     <p className="text-sm font-medium text-black font-mono">
                       {settings.brandColors?.primary}
                     </p>
-                    <p className="text-xs text-black/40 font-[350]">Cority Red — primary</p>
+                    <p className="text-xs text-black/40 font-[350]">Cority Orange — primary</p>
                   </div>
                 </div>
               </div>
@@ -221,7 +221,7 @@ export default function BrandSettings() {
                       style={{
                         width: '24px',
                         height: '24px',
-                        border: '0.79px solid #E3001B',
+                        border: '0.79px solid #D35F0B',
                         borderRadius: '6px',
                         marginTop: '6px',
                       }}
@@ -368,7 +368,7 @@ export default function BrandSettings() {
                           display: 'inline-block',
                           width: '8px',
                           height: '8px',
-                          backgroundColor: '#E3001B',
+                          backgroundColor: '#D35F0B',
                           borderRadius: '2px',
                           flexShrink: 0,
                         }}

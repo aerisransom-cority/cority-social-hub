@@ -208,7 +208,7 @@ export default function MediaLibrary() {
 
               {uploadError && (
                 <div className="text-sm text-cority-red font-[350] px-3 py-2"
-                  style={{ border: '0.79px solid #E3001B', borderRadius: '6px' }}>
+                  style={{ border: '0.79px solid #D35F0B', borderRadius: '6px' }}>
                   {uploadError}
                 </div>
               )}

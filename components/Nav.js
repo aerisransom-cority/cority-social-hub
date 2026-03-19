@@ -22,7 +22,7 @@ export default function Nav() {
         <div className="flex items-center gap-3">
           <div
             className="flex items-center justify-center flex-shrink-0"
-            style={{ width: '28px', height: '28px', backgroundColor: '#E3001B', borderRadius: '4px' }}
+            style={{ width: '28px', height: '28px', backgroundColor: '#D35F0B', borderRadius: '4px' }}
           >
             <span className="text-white font-medium text-xs">C</span>
           </div>
@@ -58,8 +58,8 @@ export default function Nav() {
                 href={tab.href}
                 className="flex items-center gap-1.5 px-3 py-3 text-[11px] font-medium uppercase tracking-[0.08em] whitespace-nowrap transition-colors duration-150"
                 style={{
-                  color: isActive ? '#E3001B' : 'rgba(0,0,0,0.5)',
-                  borderBottom: isActive ? '1.5px solid #E3001B' : '1.5px solid transparent',
+                  color: isActive ? '#D35F0B' : 'rgba(0,0,0,0.5)',
+                  borderBottom: isActive ? '1.5px solid #D35F0B' : '1.5px solid transparent',
                 }}
               >
                 <span className="text-sm leading-none">{tab.icon}</span>
