@@ -4,6 +4,12 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from './auth/[...nextauth]'
 
 const CALENDAR_PATH = path.join(process.cwd(), 'data', 'calendar.json')
+const BRIEFS_PATH = path.join(process.cwd(), 'data', 'briefs.json')
+
+const PLATFORM_LABEL = {
+  linkedin: 'LinkedIn', instagram: 'Instagram',
+  x: 'X', facebook: 'Facebook', youtube: 'YouTube',
+}
 
 function readCalendar() {
   try { return JSON.parse(fs.readFileSync(CALENDAR_PATH, 'utf-8')) } catch { return [] }
@@ -14,12 +20,39 @@ function writeCalendar(data) {
   fs.writeFileSync(CALENDAR_PATH, JSON.stringify(data, null, 2))
 }
 
+// Synthesise calendar entries from briefs that don't already have an explicit entry.
+function mergedCalendar() {
+  const explicit = readCalendar()
+  const explicitBriefIds = new Set(explicit.map((e) => String(e.briefId)).filter(Boolean))
+
+  let briefs = []
+  try { briefs = JSON.parse(fs.readFileSync(BRIEFS_PATH, 'utf-8')) } catch {}
+
+  const synthetic = briefs
+    .filter((b) => b.deadline && !explicitBriefIds.has(String(b.id)))
+    .map((b) => ({
+      id: `brief-${b.id}`,
+      createdAt: b.createdAt,
+      title: b.description.length > 60 ? b.description.slice(0, 57) + '…' : b.description,
+      platform: PLATFORM_LABEL[b.platforms?.[0]] || b.platforms?.[0] || 'LinkedIn',
+      contentType: 'Post',
+      scheduledDate: b.deadline,
+      status: 'Draft',
+      briefId: b.id,
+      clouds: b.clouds || [],
+      notes: `From brief · Audience: ${b.audience} · Goal: ${b.goal}`,
+      isBriefEntry: true,
+    }))
+
+  return [...explicit, ...synthetic]
+}
+
 export default async function handler(req, res) {
   const session = await getServerSession(req, res, authOptions)
   if (!session) return res.status(401).json({ error: 'Unauthorized' })
 
   if (req.method === 'GET') {
-    return res.status(200).json(readCalendar())
+    return res.status(200).json(mergedCalendar())
   }
 
   if (req.method === 'POST') {

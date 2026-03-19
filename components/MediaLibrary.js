@@ -74,7 +74,7 @@ export default function MediaLibrary() {
             🎬 Upload Video
           </button>
           <button className="btn-primary text-xs" onClick={() => setShowUpload(true)}>
-            📷 Upload Photo
+            📎 Upload File
           </button>
         </div>
       </div>
@@ -103,17 +103,25 @@ export default function MediaLibrary() {
               onClick={() => setSelected(asset)}
             >
               <div className="aspect-square bg-gray-50 flex items-center justify-center overflow-hidden">
-                <img
-                  src={asset.url}
-                  alt={asset.filename}
-                  className="w-full h-full object-cover"
-                  onError={(e) => { e.target.style.display = 'none' }}
-                />
+                {asset.type === 'pdf' ? (
+                  <div className="flex flex-col items-center justify-center gap-1 w-full h-full">
+                    <span style={{ fontSize: '2rem', lineHeight: 1 }}>📄</span>
+                    <span className="text-[9px] font-medium uppercase tracking-[1px] text-black/40">PDF</span>
+                  </div>
+                ) : (
+                  <img
+                    src={asset.url}
+                    alt={asset.filename}
+                    className="w-full h-full object-cover"
+                    onError={(e) => { e.target.style.display = 'none' }}
+                  />
+                )}
               </div>
               <div className="p-2" style={{ borderTop: '0.75px solid #D9D8D6' }}>
                 <p className="text-[10px] font-medium text-black truncate">{asset.filename}</p>
                 <p className="text-[9px] text-black/40 font-[350] mt-0.5">
                   {new Date(asset.uploadedAt).toLocaleDateString('en-CA')}
+                  {asset.type === 'pdf' ? ' · PDF' : ''}
                   {asset.tags?.cloud ? ` · ${asset.tags.cloud}` : ''}
                 </p>
               </div>
@@ -129,20 +137,21 @@ export default function MediaLibrary() {
           onClick={(e) => { if (e.target === e.currentTarget) setShowUpload(false) }}>
           <div className="bg-white w-full max-w-lg mx-4" style={{ borderRadius: '8px', border: '0.79px solid #D9D8D6', maxHeight: '90vh', overflowY: 'auto' }}>
             <div className="flex items-center justify-between px-6 py-4 sticky top-0 bg-white" style={{ borderBottom: '0.75px solid #D9D8D6' }}>
-              <h3 className="font-medium text-black text-sm">Upload Photo</h3>
+              <h3 className="font-medium text-black text-sm">Upload Photo or PDF</h3>
               <button onClick={() => setShowUpload(false)} className="text-black/40 hover:text-black text-lg leading-none">×</button>
             </div>
             <form onSubmit={handleUpload} className="p-6 space-y-4">
               {/* File picker */}
               <div>
-                <label className="section-label">Photo file <span className="text-cority-red">*</span></label>
+                <label className="section-label">File <span className="text-cority-red">*</span></label>
                 <input
                   ref={fileRef}
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/gif,image/webp,application/pdf"
                   required
                   className="input py-1.5"
                 />
+                <p className="text-[9px] text-black/40 font-[350] mt-1">Accepted: JPG, PNG, GIF, WebP, PDF · Max 20MB</p>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -193,7 +202,7 @@ export default function MediaLibrary() {
               )}
 
               <button type="submit" className="btn-primary w-full" disabled={uploading}>
-                {uploading ? 'Uploading…' : 'Upload Photo'}
+                {uploading ? 'Uploading…' : 'Upload'}
               </button>
             </form>
           </div>

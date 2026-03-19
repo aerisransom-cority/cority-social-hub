@@ -3,7 +3,8 @@ import path from 'path'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '../auth/[...nextauth]'
 
-const MEDIA_INDEX_PATH = path.join(process.cwd(), 'data', 'media-index.json')
+// Matches the path used in upload.js — both must stay in sync.
+const MEDIA_INDEX_PATH = '/tmp/media-index.json'
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end('Method Not Allowed')

@@ -7,7 +7,10 @@ import { authOptions } from '../auth/[...nextauth]'
 
 export const config = { api: { bodyParser: false } }
 
-const MEDIA_INDEX_PATH = path.join(process.cwd(), 'data', 'media-index.json')
+// /tmp is the only writable directory on Vercel serverless functions.
+// media-index.json is ephemeral here — it resets on cold starts.
+// Switch to STORAGE_PROVIDER=cloudinary for persistent media storage.
+const MEDIA_INDEX_PATH = '/tmp/media-index.json'
 
 function readIndex() {
   try { return JSON.parse(fs.readFileSync(MEDIA_INDEX_PATH, 'utf-8')) } catch { return [] }
@@ -44,7 +47,7 @@ export default async function handler(req, res) {
         mimeType,
         url,
         publicId,
-        type: mimeType.startsWith('video/') ? 'video' : 'photo',
+        type: mimeType === 'application/pdf' ? 'pdf' : mimeType.startsWith('video/') ? 'video' : 'photo',
         tags: {
           cloud: get(fields.cloud),
           campaign: get(fields.campaign),
@@ -59,6 +62,7 @@ export default async function handler(req, res) {
 
       const index = readIndex()
       index.unshift(asset)
+      // /tmp always exists on Vercel; no mkdir needed for the index file itself
       fs.writeFileSync(MEDIA_INDEX_PATH, JSON.stringify(index, null, 2))
 
       return res.status(201).json(asset)
