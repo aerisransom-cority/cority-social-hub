@@ -10,6 +10,7 @@ export default function MediaLibrary() {
   const [uploading, setUploading] = useState(false)
   const [showUpload, setShowUpload] = useState(false)
   const [uploadError, setUploadError] = useState(null)
+  const [videoWarning, setVideoWarning] = useState(false)
   const [selected, setSelected] = useState(null)
   const fileRef = useRef(null)
   const [tags, setTags] = useState({
@@ -28,10 +29,24 @@ export default function MediaLibrary() {
     setLoading(false)
   }
 
+  function handleFileChange() {
+    const file = fileRef.current?.files?.[0]
+    if (file?.type?.startsWith('video/')) {
+      setVideoWarning(true)
+    } else {
+      setVideoWarning(false)
+    }
+    setUploadError(null)
+  }
+
   async function handleUpload(e) {
     e.preventDefault()
     const file = fileRef.current?.files?.[0]
     if (!file) return
+    if (file.type?.startsWith('video/')) {
+      setUploadError('Video upload is coming soon. Please select a photo or PDF.')
+      return
+    }
 
     setUploading(true)
     setUploadError(null)
@@ -62,21 +77,12 @@ export default function MediaLibrary() {
         <div>
           <p className="text-sm font-medium text-black">{assets.length} asset{assets.length !== 1 ? 's' : ''}</p>
           <p className="text-xs text-black/40 font-[350] mt-0.5">
-            Storage: {process.env.NEXT_PUBLIC_STORAGE_PROVIDER || 'local'} · Photos only (video coming soon)
+            Storage: {process.env.NEXT_PUBLIC_STORAGE_PROVIDER || 'local'} · Photos &amp; PDFs · Video coming soon
           </p>
         </div>
-        <div className="flex gap-3">
-          <button
-            className="btn-secondary text-xs opacity-40 cursor-not-allowed"
-            disabled
-            title="Coming soon"
-          >
-            🎬 Upload Video
-          </button>
-          <button className="btn-primary text-xs" onClick={() => setShowUpload(true)}>
-            📎 Upload File
-          </button>
-        </div>
+        <button className="btn-primary text-xs" onClick={() => { setVideoWarning(false); setUploadError(null); setShowUpload(true) }}>
+          + Upload Media
+        </button>
       </div>
 
       {/* Asset grid */}
@@ -147,11 +153,17 @@ export default function MediaLibrary() {
                 <input
                   ref={fileRef}
                   type="file"
-                  accept="image/jpeg,image/png,image/gif,image/webp,application/pdf"
+                  accept="image/jpeg,image/png,image/gif,image/webp,application/pdf,video/*"
                   required
                   className="input py-1.5"
+                  onChange={handleFileChange}
                 />
                 <p className="text-[9px] text-black/40 font-[350] mt-1">Accepted: JPG, PNG, GIF, WebP, PDF · Max 20MB</p>
+                {videoWarning && (
+                  <p className="text-[9px] text-cority-orange font-medium mt-1">
+                    Video upload coming soon — please select a photo or PDF.
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -201,7 +213,12 @@ export default function MediaLibrary() {
                 </div>
               )}
 
-              <button type="submit" className="btn-primary w-full" disabled={uploading}>
+              <button
+                type="submit"
+                className="btn-primary w-full"
+                disabled={uploading || videoWarning}
+                title={videoWarning ? 'Video coming soon' : undefined}
+              >
                 {uploading ? 'Uploading…' : 'Upload'}
               </button>
             </form>

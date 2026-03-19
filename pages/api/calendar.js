@@ -81,7 +81,23 @@ export default async function handler(req, res) {
     if (!id) return res.status(400).json({ error: 'id is required.' })
     const calendar = readCalendar()
     const idx = calendar.findIndex((e) => e.id === id)
-    if (idx === -1) return res.status(404).json({ error: 'Entry not found.' })
+    if (idx === -1) {
+      // Upsert: synthetic brief entries (id = "brief-{briefId}") aren't stored in
+      // calendar.json until first edited. Promote them to explicit entries here.
+      const briefId = String(id).startsWith('brief-')
+        ? (isNaN(id.replace('brief-', '')) ? id.replace('brief-', '') : Number(id.replace('brief-', '')))
+        : null
+      const newEntry = {
+        id,
+        briefId,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        ...updates,
+      }
+      calendar.push(newEntry)
+      writeCalendar(calendar)
+      return res.status(200).json(newEntry)
+    }
     calendar[idx] = { ...calendar[idx], ...updates, updatedAt: new Date().toISOString() }
     writeCalendar(calendar)
     return res.status(200).json(calendar[idx])
