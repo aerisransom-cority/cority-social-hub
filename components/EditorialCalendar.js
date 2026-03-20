@@ -501,6 +501,14 @@ export default function EditorialCalendar() {
                 >
                   {detailEntry.status}
                 </span>
+                {detailEntry.contentType && (
+                  <span
+                    className="text-[9px] font-medium uppercase tracking-[1px] px-2 py-0.5 flex-shrink-0"
+                    style={{ border: '0.79px solid #D9D8D6', borderRadius: '4px', color: 'rgba(0,0,0,0.4)' }}
+                  >
+                    {detailEntry.contentType}
+                  </span>
+                )}
                 <span className="text-xs text-black/40 font-[350] flex-shrink-0">
                   {detailEntry.scheduledDate}
                 </span>

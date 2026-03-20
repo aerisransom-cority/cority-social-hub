@@ -18,6 +18,78 @@ const PLATFORMS = [
 const ALL_PLATFORM_IDS = PLATFORMS.map((p) => p.id)
 const CHAR_LIMITS = { linkedin: 3000, instagram: 2200, x: 280, facebook: 2000 }
 
+// ── Content type config ──────────────────────────────────────────────────────
+
+const CONTENT_TYPE_OPTIONS = [
+  { id: 'text-post',    label: 'Text post / link post', desc: 'Caption only — formatted per platform.' },
+  { id: 'video-post',   label: 'Video post',            desc: 'Video caption — formatted per platform.' },
+  { id: 'carousel',     label: 'Carousel',              desc: 'Caption + slide copy (hook, body slides, CTA slide).' },
+  { id: 'graphic',      label: 'Graphic / image',       desc: 'Caption + asset copy (headline + subheadline).' },
+  { id: 'infographic',  label: 'Infographic',           desc: 'Caption + structured key points.' },
+  { id: 'youtube',      label: 'YouTube',               desc: 'Title, description, and script outline (YouTube tab) + promo caption for other platforms.' },
+  { id: 'video-script', label: 'Video script',          desc: 'Caption + full word-for-word script with stage directions.' },
+]
+
+const VISUAL_TYPES = new Set(['carousel', 'graphic', 'infographic', 'youtube', 'video-script'])
+
+const ASSET_FORMAT_PLACEHOLDER = {
+  carousel:       'e.g. 5 slides, one key stat per slide, data-driven format',
+  graphic:        'e.g. quote card with pull quote and attribution',
+  infographic:    'e.g. vertical step-by-step process, 4 stages, icon-driven',
+  youtube:        'e.g. 3-minute talking head with b-roll, educational tone',
+  'video-script': 'e.g. 90-second LinkedIn short-form, presenter to camera',
+}
+
+// Map content type → UTM content value (where a match exists)
+const CONTENT_TYPE_TO_UTM = {
+  'video-post':   'video',
+  carousel:       'carousel',
+  infographic:    'infograph',
+  youtube:        'video',
+  'video-script': 'video',
+}
+
+// Output toggles shown in results panel per visual content type
+const TOGGLE_CONFIG = {
+  carousel:       [{ key: 'caption', label: 'Caption' }, { key: 'assetCopy', label: 'Slide copy' }],
+  graphic:        [{ key: 'caption', label: 'Caption' }, { key: 'assetCopy', label: 'Asset copy' }],
+  infographic:    [{ key: 'caption', label: 'Caption' }, { key: 'assetCopy', label: 'Asset copy' }],
+  youtube:        [{ key: 'title', label: 'Title' }, { key: 'description', label: 'Description' }, { key: 'scriptOutline', label: 'Script outline' }],
+  'video-script': [{ key: 'caption', label: 'Caption' }, { key: 'script', label: 'Script' }],
+}
+
+// Map suggestion contentType label → form contentType id
+const SUGGESTION_TYPE_MAP = {
+  carousel: 'carousel', video: 'video-post', 'short-form video': 'video-post',
+  'text post': 'text-post', infographic: 'infographic', meme: 'text-post',
+}
+
+// ── Toggle switch component ──────────────────────────────────────────────────
+
+function Toggle({ on, onChange, label }) {
+  return (
+    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', userSelect: 'none' }}>
+      <div
+        onClick={(e) => { e.preventDefault(); onChange(!on) }}
+        style={{
+          width: 28, height: 16, borderRadius: 8,
+          background: on ? '#D35F0B' : '#D9D8D6',
+          position: 'relative', flexShrink: 0, cursor: 'pointer',
+          transition: 'background 0.15s',
+        }}
+      >
+        <div style={{
+          position: 'absolute', top: 2,
+          left: on ? 14 : 2, width: 12, height: 12,
+          borderRadius: '50%', background: '#fff',
+          transition: 'left 0.15s',
+        }} />
+      </div>
+      <span style={{ fontSize: 11, color: on ? '#000' : 'rgba(0,0,0,0.4)' }}>{label}</span>
+    </label>
+  )
+}
+
 // Platform → UTM source (instagram excluded — no clickable links in captions)
 const UTM_SOURCE = {
   linkedin: 'linkedin',
@@ -92,11 +164,14 @@ export default function RequestBrief({ initialValues }) {
       return {
         description: '', deadline: '', audience: '', goal: '', url: '',
         suggestedCopy: '', clouds: [], platforms: [...ALL_PLATFORM_IDS],
+        contentType: 'text-post', assetFormat: '',
         utmCampaign: '', utmContent: '', utmTerm: '', utmIsPromoted: false,
       }
     }
     const ids = suggestionPlatformsToIds(initialValues.platforms)
     const cloud = CAMPAIGN_TO_CLOUD[initialValues.suggestedCampaign] || ''
+    const rawType = (initialValues.contentType || '').toLowerCase()
+    const mappedType = SUGGESTION_TYPE_MAP[rawType] || 'text-post'
     return {
       description: initialValues.suggestedAngle || '',
       deadline: '',
@@ -105,7 +180,8 @@ export default function RequestBrief({ initialValues }) {
       url: '', suggestedCopy: '',
       clouds: cloud ? [cloud] : [],
       platforms: ids.length > 0 ? ids : [...ALL_PLATFORM_IDS],
-      utmCampaign: '', utmContent: '', utmTerm: '', utmIsPromoted: false,
+      contentType: mappedType, assetFormat: '',
+      utmCampaign: '', utmContent: CONTENT_TYPE_TO_UTM[mappedType] || '', utmTerm: '', utmIsPromoted: false,
     }
   })
   const [loading, setLoading] = useState(false)
@@ -115,9 +191,21 @@ export default function RequestBrief({ initialValues }) {
   const [platformUtms, setPlatformUtms] = useState({}) // { linkedin: url, instagram: url, ... }
   const [utmExpanded, setUtmExpanded] = useState(false)
   const [debugPrompt, setDebugPrompt] = useState(null)
+  const [outputToggles, setOutputToggles] = useState({})
 
   const { data: session } = useSession()
   const isAdmin = session?.user?.role === 'admin'
+
+  function initToggles(contentType, platforms) {
+    const config = TOGGLE_CONFIG[contentType]
+    if (!config) return {}
+    const t = {}
+    for (const p of platforms) {
+      t[p] = {}
+      for (const item of config) t[p][item.key] = true
+    }
+    return t
+  }
 
   function handleField(field, value) {
     setForm((f) => ({ ...f, [field]: value }))
@@ -151,6 +239,7 @@ export default function RequestBrief({ initialValues }) {
     setResult(null)
     setPlatformUtms({})
     setDebugPrompt(null)
+    setOutputToggles({})
     try {
       const res = await fetch('/api/generate-copy', {
         method: 'POST',
@@ -164,12 +253,15 @@ export default function RequestBrief({ initialValues }) {
           suggestedCopy: form.suggestedCopy || null,
           clouds: form.clouds,
           platforms: form.platforms,
+          contentType: form.contentType || 'text-post',
+          assetFormat: form.assetFormat || null,
         }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Something went wrong.')
       setResult(data)
       setDebugPrompt(data.debugPrompt || null)
+      setOutputToggles(initToggles(form.contentType, Object.keys(data.variants || {})))
       const firstTab = PLATFORMS.find((p) => data.variants?.[p.id])?.id || 'linkedin'
       setActiveTab(firstTab)
 
@@ -288,6 +380,43 @@ export default function RequestBrief({ initialValues }) {
               onChange={(e) => handleField('goal', e.target.value)}
               required
             />
+          </div>
+
+          <div>
+            <label className="section-label">
+              Content type <span className="text-cority-red">*</span>
+            </label>
+            <select
+              className="input"
+              value={form.contentType}
+              onChange={(e) => {
+                const ct = e.target.value
+                handleField('contentType', ct)
+                handleField('assetFormat', '')
+                const utmVal = CONTENT_TYPE_TO_UTM[ct]
+                if (utmVal) handleField('utmContent', utmVal)
+              }}
+            >
+              {CONTENT_TYPE_OPTIONS.map((o) => (
+                <option key={o.id} value={o.id}>{o.label}</option>
+              ))}
+            </select>
+            {CONTENT_TYPE_OPTIONS.find((o) => o.id === form.contentType) && (
+              <p className="text-[10px] text-black/40 font-[350] mt-1.5">
+                {CONTENT_TYPE_OPTIONS.find((o) => o.id === form.contentType).desc}
+              </p>
+            )}
+            {VISUAL_TYPES.has(form.contentType) && (
+              <div className="mt-3">
+                <label className="section-label">Describe your asset format <span className="text-black/30 normal-case">(optional)</span></label>
+                <input
+                  className="input"
+                  placeholder={ASSET_FORMAT_PLACEHOLDER[form.contentType] || ''}
+                  value={form.assetFormat}
+                  onChange={(e) => handleField('assetFormat', e.target.value)}
+                />
+              </div>
+            )}
           </div>
 
           <div>
@@ -550,63 +679,209 @@ export default function RequestBrief({ initialValues }) {
             </div>
 
             <div className="p-6 space-y-5">
-              {activeTab === 'youtube' && activeVariant ? (
-                <>
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="section-label" style={{ marginBottom: 0 }}>Title</label>
-                      <div className="flex items-center gap-3">
-                        <span className={`text-xs font-[350] ${(activeVariant.title?.length || 0) > 60 ? 'text-cority-red' : 'text-black/30'}`}>
-                          {activeVariant.title?.length || 0} / 60 chars
-                        </span>
-                        <CopyButton text={activeVariant.title || ''} />
-                      </div>
-                    </div>
-                    <div
-                      className="p-4 text-sm text-black font-[350] leading-relaxed"
-                      style={{ border: '0.79px solid #D9D8D6', borderRadius: '6px', background: '#fafafa' }}
-                    >
-                      {activeVariant.title}
-                    </div>
-                  </div>
+              {(() => {
+                const ct = result.contentType || 'text-post'
+                const toggleCfg = TOGGLE_CONFIG[ct]
+                const ptoggle = outputToggles[activeTab] || {}
 
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="section-label" style={{ marginBottom: 0 }}>Description</label>
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs text-black/30 font-[350]">
-                          {activeVariant.description?.length || 0} chars
-                        </span>
-                        <CopyButton text={activeVariant.description || ''} />
+                if (!activeVariant) return (
+                  <p className="text-sm text-black/40 font-[350]">No copy available for this platform.</p>
+                )
+
+                // ── Shared helpers ──────────────────────────────────────────
+                const boxStyle = { border: '0.79px solid #D9D8D6', borderRadius: '6px', background: '#fafafa' }
+
+                function FieldRow({ label, charText, onCopy, children }) {
+                  // charText may be a string, a number string, or a JSX node (e.g. <CharCount>)
+                  const charNode = typeof charText === 'string'
+                    ? <span className="text-xs text-black/30 font-[350]">{charText}</span>
+                    : charText
+                  return (
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="section-label" style={{ marginBottom: 0 }}>{label}</label>
+                        <div className="flex items-center gap-3">
+                          {charNode}
+                          <CopyButton text={onCopy} />
+                        </div>
                       </div>
+                      {children}
                     </div>
-                    <div
-                      className="p-4 text-sm text-black font-[350] leading-relaxed whitespace-pre-wrap"
-                      style={{ border: '0.79px solid #D9D8D6', borderRadius: '6px', background: '#fafafa' }}
+                  )
+                }
+
+                const toggleBar = toggleCfg && (
+                  <div className="flex items-center gap-5 pb-3" style={{ borderBottom: '0.75px solid #D9D8D6' }}>
+                    {toggleCfg.map((t) => (
+                      <Toggle
+                        key={t.key}
+                        on={ptoggle[t.key] !== false}
+                        onChange={(v) => setOutputToggles((prev) => ({
+                          ...prev,
+                          [activeTab]: { ...(prev[activeTab] || {}), [t.key]: v },
+                        }))}
+                        label={t.label}
+                      />
+                    ))}
+                  </div>
+                )
+
+                // ── YouTube type on YouTube platform ────────────────────────
+                if (ct === 'youtube' && activeTab === 'youtube') {
+                  return (
+                    <>
+                      {toggleBar}
+                      {ptoggle.title !== false && (
+                        <FieldRow
+                          label="Title"
+                          charText={`${activeVariant.title?.length || 0} / 60 chars`}
+                          onCopy={activeVariant.title || ''}
+                        >
+                          <div className="p-4 text-sm text-black font-[350] leading-relaxed" style={boxStyle}>
+                            {activeVariant.title}
+                          </div>
+                        </FieldRow>
+                      )}
+                      {ptoggle.description !== false && (
+                        <FieldRow
+                          label="Description"
+                          charText={`${activeVariant.description?.length || 0} chars`}
+                          onCopy={activeVariant.description || ''}
+                        >
+                          <div className="p-4 text-sm text-black font-[350] leading-relaxed whitespace-pre-wrap" style={boxStyle}>
+                            {activeVariant.description}
+                          </div>
+                        </FieldRow>
+                      )}
+                      {ptoggle.scriptOutline !== false && activeVariant.scriptOutline && (
+                        <FieldRow label="Script outline" onCopy={activeVariant.scriptOutline || ''}>
+                          <div className="p-4 text-sm text-black font-[350] leading-relaxed whitespace-pre-wrap" style={boxStyle}>
+                            {activeVariant.scriptOutline}
+                          </div>
+                        </FieldRow>
+                      )}
+                    </>
+                  )
+                }
+
+                // ── YouTube type on non-YouTube platform (promo caption) ────
+                if (ct === 'youtube' && activeTab !== 'youtube') {
+                  return (
+                    <FieldRow
+                      label={`${activePlatform?.label} Promo Caption`}
+                      charText={activeVariant.caption ? `${activeVariant.caption.length} chars` : null}
+                      onCopy={activeVariant.caption || ''}
                     >
-                      {activeVariant.description}
-                    </div>
-                  </div>
-                </>
-              ) : activeVariant ? (
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="section-label" style={{ marginBottom: 0 }}>{activePlatform?.label} Post</label>
-                    <div className="flex items-center gap-3">
-                      <CharCount text={activeVariant.copy} platform={activeTab} />
-                      <CopyButton text={activeVariant.copy || ''} />
-                    </div>
-                  </div>
-                  <div
-                    className="p-4 text-sm text-black font-[350] leading-relaxed whitespace-pre-wrap"
-                    style={{ border: '0.79px solid #D9D8D6', borderRadius: '6px', background: '#fafafa' }}
+                      <div className="p-4 text-sm text-black font-[350] leading-relaxed whitespace-pre-wrap" style={boxStyle}>
+                        {activeVariant.caption}
+                      </div>
+                    </FieldRow>
+                  )
+                }
+
+                // ── Visual types: carousel, graphic, infographic ────────────
+                if (['carousel', 'graphic', 'infographic'].includes(ct)) {
+                  const assetLabel = ct === 'carousel' ? 'Slide copy' : 'Asset copy'
+                  return (
+                    <>
+                      {toggleBar}
+                      {ptoggle.caption !== false && (
+                        <FieldRow
+                          label="Caption"
+                          charText={<CharCount text={activeVariant.caption} platform={activeTab} />}
+                          onCopy={activeVariant.caption || ''}
+                        >
+                          <div className="p-4 text-sm text-black font-[350] leading-relaxed whitespace-pre-wrap" style={boxStyle}>
+                            {activeVariant.caption}
+                          </div>
+                        </FieldRow>
+                      )}
+                      {ptoggle.assetCopy !== false && activeVariant.assetCopy && (
+                        <FieldRow label={assetLabel} onCopy={activeVariant.assetCopy || ''}>
+                          <div className="p-4 text-sm text-black font-[350] leading-relaxed whitespace-pre-wrap" style={{ ...boxStyle, fontFamily: 'monospace', fontSize: 12 }}>
+                            {activeVariant.assetCopy}
+                          </div>
+                        </FieldRow>
+                      )}
+                    </>
+                  )
+                }
+
+                // ── Video script ────────────────────────────────────────────
+                if (ct === 'video-script') {
+                  return (
+                    <>
+                      {toggleBar}
+                      {ptoggle.caption !== false && (
+                        <FieldRow
+                          label="Caption"
+                          charText={<CharCount text={activeVariant.caption} platform={activeTab} />}
+                          onCopy={activeVariant.caption || ''}
+                        >
+                          <div className="p-4 text-sm text-black font-[350] leading-relaxed whitespace-pre-wrap" style={boxStyle}>
+                            {activeVariant.caption}
+                          </div>
+                        </FieldRow>
+                      )}
+                      {ptoggle.script !== false && activeVariant.script && (
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <label className="section-label" style={{ marginBottom: 0 }}>Script</label>
+                              {activeVariant.estimatedDuration && (
+                                <span className="text-[10px] text-black/35 font-[350]">~ {activeVariant.estimatedDuration}</span>
+                              )}
+                            </div>
+                            <CopyButton text={activeVariant.script || ''} />
+                          </div>
+                          <div className="p-4 text-sm text-black font-[350] leading-relaxed whitespace-pre-wrap" style={boxStyle}>
+                            {activeVariant.script}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )
+                }
+
+                // ── Standard YouTube platform for non-YouTube content types ─
+                if (activeTab === 'youtube') {
+                  return (
+                    <>
+                      <FieldRow
+                        label="Title"
+                        charText={`${activeVariant.title?.length || 0} / 60 chars`}
+                        onCopy={activeVariant.title || ''}
+                      >
+                        <div className="p-4 text-sm text-black font-[350] leading-relaxed" style={boxStyle}>
+                          {activeVariant.title}
+                        </div>
+                      </FieldRow>
+                      <FieldRow
+                        label="Description"
+                        charText={`${activeVariant.description?.length || 0} chars`}
+                        onCopy={activeVariant.description || ''}
+                      >
+                        <div className="p-4 text-sm text-black font-[350] leading-relaxed whitespace-pre-wrap" style={boxStyle}>
+                          {activeVariant.description}
+                        </div>
+                      </FieldRow>
+                    </>
+                  )
+                }
+
+                // ── Default: text-post, video-post ──────────────────────────
+                return (
+                  <FieldRow
+                    label={`${activePlatform?.label} Post`}
+                    charText={<CharCount text={activeVariant.copy} platform={activeTab} />}
+                    onCopy={activeVariant.copy || ''}
                   >
-                    {activeVariant.copy}
-                  </div>
-                </div>
-              ) : (
-                <p className="text-sm text-black/40 font-[350]">No copy available for this platform.</p>
-              )}
+                    <div className="p-4 text-sm text-black font-[350] leading-relaxed whitespace-pre-wrap" style={boxStyle}>
+                      {activeVariant.copy}
+                    </div>
+                  </FieldRow>
+                )
+              })()}
 
               {/* Per-platform UTM URL — Instagram shows bio note instead */}
               {activeTab === 'instagram' ? (
