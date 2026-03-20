@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import KnowledgeBase from '../components/KnowledgeBase'
 
 export default function BrandSettings() {
   const [settings, setSettings] = useState(null)
@@ -7,6 +8,7 @@ export default function BrandSettings() {
   const [saveStatus, setSaveStatus] = useState(null) // 'saved' | 'error' | null
   const [activeSection, setActiveSection] = useState('overview')
   const [editingPrompt, setEditingPrompt] = useState(false)
+  const [kbStats, setKbStats] = useState(null)
 
   useEffect(() => {
     fetch('/api/brand-settings')
@@ -16,6 +18,18 @@ export default function BrandSettings() {
         setLoading(false)
       })
       .catch(() => setLoading(false))
+
+    // Load KB stats for overview card (non-fatal)
+    fetch('/api/knowledge/documents')
+      .then((r) => r.ok ? r.json() : [])
+      .then((docs) => {
+        if (Array.isArray(docs)) {
+          const totalChunks = docs.reduce((s, d) => s + (d.chunkCount || 0), 0)
+          const lastUpload = docs.length > 0 ? docs[0].uploadDate : null
+          setKbStats({ count: docs.length, totalChunks, lastUpload })
+        }
+      })
+      .catch(() => {})
   }, [])
 
   async function save(updated) {
@@ -89,6 +103,7 @@ export default function BrandSettings() {
     { id: 'content', label: 'Content Mix' },
     { id: 'platforms', label: 'Platforms' },
     { id: 'ai-prompt', label: 'AI System Prompt' },
+    { id: 'knowledge', label: 'Knowledge Base' },
   ]
 
   return (
@@ -200,6 +215,30 @@ export default function BrandSettings() {
                   {settings.relatedClouds?.map((cloud) => (
                     <span key={cloud} className="tag">{cloud}</span>
                   ))}
+                </div>
+              </div>
+
+              {/* Knowledge Base status */}
+              <div style={{ borderTop: '0.75px solid #D9D8D6', paddingTop: 20 }}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="section-label" style={{ marginBottom: 4 }}>Knowledge Base</label>
+                    {kbStats ? (
+                      <p className="text-sm text-black/60 font-[350]">
+                        {kbStats.count} document{kbStats.count !== 1 ? 's' : ''} — {kbStats.totalChunks} chunks indexed
+                        {kbStats.lastUpload && ` · Last upload ${new Date(kbStats.lastUpload).toLocaleDateString('en-CA')}`}
+                      </p>
+                    ) : (
+                      <p className="text-sm text-black/40 font-[350]">No documents uploaded yet.</p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => setActiveSection('knowledge')}
+                    className="btn-secondary text-xs"
+                    style={{ flexShrink: 0, marginLeft: 16 }}
+                  >
+                    Manage →
+                  </button>
                 </div>
               </div>
             </div>
@@ -464,6 +503,9 @@ export default function BrandSettings() {
               )}
             </div>
           )}
+
+          {/* KNOWLEDGE BASE */}
+          {activeSection === 'knowledge' && <KnowledgeBase />}
 
         </div>
       </div>

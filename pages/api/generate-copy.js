@@ -2,6 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import Anthropic from '@anthropic-ai/sdk'
 import { kvGet, kvSet } from '../../lib/kv'
+import { searchKnowledge, formatKnowledgeContext, getSourceDocs } from '../../lib/knowledge'
 
 // Brand settings stay as a committed file — reads /tmp (user-modified) then data/ seed
 const TMP_BRAND    = '/tmp/brand-settings.json'
@@ -86,11 +87,21 @@ ${guidelines}`
 
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
+  // Knowledge base retrieval — query with brief description + audience + clouds
+  const kbQuery = [description, audience, clouds?.join(' ')].filter(Boolean).join(' ')
+  const kbChunks = await searchKnowledge(kbQuery, 3)
+  const kbContext = formatKnowledgeContext(kbChunks)
+  const sourceDocs = getSourceDocs(kbChunks)
+
+  const systemPrompt = kbContext
+    ? `${brandSettings.aiSystemPrompt}\n\n---\nPRODUCT KNOWLEDGE CONTEXT\nThe following excerpts are from Cority's internal documents. Reference specific customer stories, product names, and real data points from this context when drafting copy — do not invent generic claims.\n\n${kbContext}`
+    : brandSettings.aiSystemPrompt
+
   try {
     const message = await client.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 2048,
-      system: brandSettings.aiSystemPrompt,
+      system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],
     })
 
@@ -139,7 +150,7 @@ ${guidelines}`
       }
     } catch {}
 
-    return res.status(200).json({ variants, briefId: brief.id })
+    return res.status(200).json({ variants, briefId: brief.id, sourceDocs })
   } catch (err) {
     console.error('Copy generation error:', err)
     if (err instanceof SyntaxError) {

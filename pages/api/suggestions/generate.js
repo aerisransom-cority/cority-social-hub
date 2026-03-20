@@ -4,6 +4,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '../auth/[...nextauth]'
 import { kvGet, kvSet } from '../../../lib/kv'
+import { searchKnowledge, formatKnowledgeContext } from '../../../lib/knowledge'
 
 const BRAND_PATH = path.join(process.cwd(), 'data', 'brand-settings.json')
 const BRIEFS_SEED = path.join(process.cwd(), 'data', 'briefs.json')
@@ -86,6 +87,11 @@ export default async function handler(req, res) {
       ? dismissed.slice(0, 30).map((d) => d.angle || d.id).filter(Boolean)
       : []
 
+    // Knowledge base — fetch chunks relevant to underrepresented pillars
+    const kbQuery = underrepresented.join(' ')
+    const kbChunks = await searchKnowledge(kbQuery, 3)
+    const kbContext = formatKnowledgeContext(kbChunks)
+
     const voicePillars = (brand.voicePillars || []).map((v) => `${v.name}: ${v.description}`).join('; ')
     const storyThemes = (brand.storytellingThemes || []).map((t) => `${t.theme} — ${t.description}`).join('; ')
     const campaigns = (brand.activeCampaigns || []).map((c) => `${c.id} (${c.name}): ${c.themes.join(', ')}`).join('; ')
@@ -116,6 +122,7 @@ ${last10Titles.length > 0 ? last10Titles.map((t, i) => `${i + 1}. ${t}`).join('\
 
 RECENTLY DISMISSED (do not resurface):
 ${recentDismissed.length > 0 ? recentDismissed.join('\n') : 'None.'}
+${kbContext ? `\nPRODUCT KNOWLEDGE CONTEXT (reference real campaigns, customer outcomes, and product capabilities in your suggestions):\n${kbContext}` : ''}
 
 Return a JSON array of exactly 5 suggestion objects. No markdown fences, no explanation — raw JSON only.
 Each object must have exactly these keys:

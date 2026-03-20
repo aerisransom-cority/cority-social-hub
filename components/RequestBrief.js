@@ -480,6 +480,19 @@ export default function RequestBrief({ initialValues }) {
                 <p className="text-xs text-black/40 font-[350] mt-0.5">
                   Select a platform to review and copy.
                 </p>
+                {result.sourceDocs?.length > 0 && (
+                  <div className="flex items-center gap-1.5 mt-2">
+                    <span
+                      title={`Referenced: ${result.sourceDocs.map((d) => d.docName).join(', ')}`}
+                      style={{ fontSize: 10, fontWeight: 500, color: '#49763E', background: '#EFF6EE', borderRadius: 3, padding: '2px 7px', cursor: 'default' }}
+                    >
+                      📚 Knowledge base used
+                    </span>
+                    <span className="text-[10px] text-black/35 font-[350]">
+                      {result.sourceDocs.map((d) => d.docName).join(', ')}
+                    </span>
+                  </div>
+                )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 {result?.briefId && (

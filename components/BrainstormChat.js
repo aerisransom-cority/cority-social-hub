@@ -35,16 +35,23 @@ function Message({ msg }) {
           <span className="text-white text-[9px] font-medium">AI</span>
         </div>
       )}
-      <div
-        className="max-w-[80%] px-4 py-3 text-sm font-[350] leading-relaxed whitespace-pre-wrap"
-        style={{
-          border: '0.79px solid #D9D8D6',
-          borderRadius: isUser ? '12px 12px 2px 12px' : '2px 12px 12px 12px',
-          background: isUser ? '#000000' : '#ffffff',
-          color: isUser ? '#ffffff' : '#000000',
-        }}
-      >
-        {msg.content}
+      <div className="max-w-[80%]">
+        <div
+          className="px-4 py-3 text-sm font-[350] leading-relaxed whitespace-pre-wrap"
+          style={{
+            border: '0.79px solid #D9D8D6',
+            borderRadius: isUser ? '12px 12px 2px 12px' : '2px 12px 12px 12px',
+            background: isUser ? '#000000' : '#ffffff',
+            color: isUser ? '#ffffff' : '#000000',
+          }}
+        >
+          {msg.content}
+        </div>
+        {!isUser && msg.sourceDocs?.length > 0 && (
+          <p style={{ fontSize: 10, color: 'rgba(0,0,0,0.35)', marginTop: 4, paddingLeft: 4, fontWeight: 350 }}>
+            📖 Sources: {msg.sourceDocs.map((d) => d.docName).join(', ')}
+          </p>
+        )}
       </div>
     </div>
   )
@@ -100,7 +107,8 @@ export default function BrainstormChat({ onOpenAsBrief }) {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Something went wrong.')
-      setMessages([...updated, data.message])
+      const assistantMsg = { ...data.message, sourceDocs: data.sourceDocs || [] }
+      setMessages([...updated, assistantMsg])
     } catch (err) {
       setError(err.message)
       setMessages(messages)
