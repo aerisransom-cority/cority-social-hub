@@ -5,6 +5,7 @@ import { useSession, signOut } from 'next-auth/react'
 const tabs = [
   { href: '/content-studio', label: 'Content Studio', icon: '✍️' },
   { href: '/performance',    label: 'Performance',    icon: '📊' },
+  { href: '/utm-builder',    label: 'UTM Builder',    icon: '🔗' },
   { href: '/brand-settings', label: 'Brand Settings', icon: '🎯' },
 ]
 
