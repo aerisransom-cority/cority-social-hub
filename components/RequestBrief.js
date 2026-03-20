@@ -462,9 +462,25 @@ export default function RequestBrief() {
                   Select a platform to review and copy.
                 </p>
               </div>
-              <button onClick={handleRegenerate} className="btn-secondary text-xs" disabled={loading}>
-                Regenerate
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                {result?.briefId && (
+                  <a
+                    href={`/content-studio?section=design&briefId=${result.briefId}`}
+                    style={{
+                      fontSize: 11,
+                      color: '#D35F0B',
+                      fontWeight: 400,
+                      textDecoration: 'none',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    Create graphic →
+                  </a>
+                )}
+                <button onClick={handleRegenerate} className="btn-secondary text-xs" disabled={loading}>
+                  Regenerate
+                </button>
+              </div>
             </div>
 
             <div className="flex overflow-x-auto" style={{ borderBottom: '0.75px solid #D9D8D6' }}>

@@ -1,11 +1,13 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/router'
 import dynamic from 'next/dynamic'
 import RequestBrief from '../components/RequestBrief'
+import DesignHandoff from '../components/DesignHandoff'
 
 // Dynamically import heavy components to avoid SSR issues
-const BrainstormChat = dynamic(() => import('../components/BrainstormChat'), { ssr: false })
+const BrainstormChat   = dynamic(() => import('../components/BrainstormChat'),   { ssr: false })
 const EditorialCalendar = dynamic(() => import('../components/EditorialCalendar'), { ssr: false })
-const MediaLibrary = dynamic(() => import('../components/MediaLibrary'), { ssr: false })
+const MediaLibrary     = dynamic(() => import('../components/MediaLibrary'),     { ssr: false })
 
 const SECTIONS = [
   {
@@ -32,10 +34,25 @@ const SECTIONS = [
     icon: '🖼️',
     description: 'Upload and organise photos and documents',
   },
+  {
+    id: 'design',
+    label: 'Design',
+    icon: '🎨',
+    description: 'Hand off copy to the design tool and create brand-compliant graphics',
+  },
 ]
 
 export default function ContentStudio() {
+  const router = useRouter()
   const [activeSection, setActiveSection] = useState('process-request')
+  const [designBriefId, setDesignBriefId] = useState(null)
+
+  // Read ?section and ?briefId from URL on first load
+  useEffect(() => {
+    if (!router.isReady) return
+    if (router.query.section) setActiveSection(router.query.section)
+    if (router.query.briefId) setDesignBriefId(String(router.query.briefId))
+  }, [router.isReady])
 
   const current = SECTIONS.find((s) => s.id === activeSection)
 
@@ -99,9 +116,14 @@ export default function ContentStudio() {
               <RequestBrief />
             </div>
           )}
-          {activeSection === 'brainstorm' && <BrainstormChat />}
-          {activeSection === 'calendar' && <EditorialCalendar />}
-          {activeSection === 'media' && <MediaLibrary />}
+          {activeSection === 'brainstorm'  && <BrainstormChat />}
+          {activeSection === 'calendar'    && <EditorialCalendar />}
+          {activeSection === 'media'       && <MediaLibrary />}
+          {activeSection === 'design'      && (
+            <div className="p-8">
+              <DesignHandoff initialBriefId={designBriefId} />
+            </div>
+          )}
         </div>
       </div>
     </div>
