@@ -1,9 +1,10 @@
 import fs from 'fs'
 import path from 'path'
+import { kvSet } from '../../lib/kv'
 
 // Vercel's /data directory is read-only (build artifact).
-// Writes go to /tmp/brand-settings.json (writable, ephemeral between cold starts).
-// Reads try /tmp first, then fall back to the committed seed in data/.
+// Writes go to /tmp/brand-settings.json (writable, ephemeral between cold starts)
+// AND to Vercel KV so cold-start functions always read the latest settings.
 const TMP_PATH = '/tmp/brand-settings.json'
 const SEED_PATH = path.join(process.cwd(), 'data', 'brand-settings.json')
 
@@ -13,7 +14,7 @@ function readSettings() {
   return {}
 }
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
   if (req.method === 'GET') {
     const settings = readSettings()
     if (!settings || Object.keys(settings).length === 0) {
@@ -25,7 +26,12 @@ export default function handler(req, res) {
   if (req.method === 'POST') {
     try {
       const data = req.body
+      // Write to /tmp for warm-function speed
       fs.writeFileSync(TMP_PATH, JSON.stringify(data, null, 2), 'utf-8')
+      // Write to KV for cold-start durability (non-fatal)
+      try { await kvSet('brand-settings', data) } catch (kvErr) {
+        console.warn('[brand-settings] KV write failed:', kvErr.message)
+      }
       return res.status(200).json({ success: true })
     } catch (err) {
       return res.status(500).json({ error: 'Failed to save brand settings.' })

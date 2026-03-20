@@ -1,14 +1,9 @@
-import fs from 'fs'
-import path from 'path'
 import Anthropic from '@anthropic-ai/sdk'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from './auth/[...nextauth]'
 import { kvGet, kvSet } from '../../lib/kv'
 import { searchKnowledge, formatKnowledgeContext, getSourceDocs } from '../../lib/knowledge'
-
-// Brand settings stay as a committed file — not in KV
-const TMP_BRAND  = '/tmp/brand-settings.json'
-const SEED_BRAND = path.join(process.cwd(), 'data', 'brand-settings.json')
+import { readBrandSettings } from '../../lib/brand'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end('Method Not Allowed')
@@ -23,15 +18,9 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'ANTHROPIC_API_KEY not set.' })
   }
 
-  let brandSettings
-  try {
-    brandSettings = JSON.parse(fs.readFileSync(TMP_BRAND, 'utf-8'))
-  } catch {
-    try {
-      brandSettings = JSON.parse(fs.readFileSync(SEED_BRAND, 'utf-8'))
-    } catch {
-      return res.status(500).json({ error: 'Could not load brand settings.' })
-    }
+  const brandSettings = await readBrandSettings()
+  if (!brandSettings || !brandSettings.aiSystemPrompt) {
+    return res.status(500).json({ error: 'Could not load brand settings.' })
   }
 
   // Knowledge base retrieval — query with the latest user message

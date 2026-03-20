@@ -1,12 +1,7 @@
-import fs from 'fs'
-import path from 'path'
 import Anthropic from '@anthropic-ai/sdk'
 import { kvGet, kvSet } from '../../lib/kv'
 import { searchKnowledge, formatKnowledgeContext, getSourceDocs } from '../../lib/knowledge'
-
-// Brand settings stay as a committed file — reads /tmp (user-modified) then data/ seed
-const TMP_BRAND    = '/tmp/brand-settings.json'
-const SEED_BRAND   = path.join(process.cwd(), 'data', 'brand-settings.json')
+import { readBrandSettings } from '../../lib/brand'
 const SEED_BRIEFS  = path.join(process.cwd(), 'data', 'briefs.json')
 const SEED_CALENDAR = path.join(process.cwd(), 'data', 'calendar.json')
 
@@ -27,16 +22,9 @@ export default async function handler(req, res) {
     })
   }
 
-  // Brand settings: /tmp (user-modified) → committed data/ seed
-  let brandSettings
-  try {
-    brandSettings = JSON.parse(fs.readFileSync(TMP_BRAND, 'utf-8'))
-  } catch {
-    try {
-      brandSettings = JSON.parse(fs.readFileSync(SEED_BRAND, 'utf-8'))
-    } catch {
-      return res.status(500).json({ error: 'Could not load brand settings.' })
-    }
+  const brandSettings = await readBrandSettings()
+  if (!brandSettings || !brandSettings.aiSystemPrompt) {
+    return res.status(500).json({ error: 'Could not load brand settings.' })
   }
 
   const selectedPlatforms = platforms?.length

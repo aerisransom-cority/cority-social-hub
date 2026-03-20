@@ -1,23 +1,14 @@
-import fs from 'fs'
-import path from 'path'
 import Anthropic from '@anthropic-ai/sdk'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '../auth/[...nextauth]'
 import { kvGet, kvSet } from '../../../lib/kv'
 import { searchKnowledge, formatKnowledgeContext } from '../../../lib/knowledge'
-
-const BRAND_PATH = path.join(process.cwd(), 'data', 'brand-settings.json')
+import { readBrandSettings } from '../../../lib/brand'
 const BRIEFS_SEED = path.join(process.cwd(), 'data', 'briefs.json')
 const PERF_SEED = path.join(process.cwd(), 'data', 'performance.json')
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-
-function readBrand() {
-  try { return JSON.parse(fs.readFileSync('/tmp/brand-settings.json', 'utf-8')) } catch {}
-  try { return JSON.parse(fs.readFileSync(BRAND_PATH, 'utf-8')) } catch {}
-  return {}
-}
 
 export default async function handler(req, res) {
   const session = await getServerSession(req, res, authOptions)
@@ -39,7 +30,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const brand = readBrand()
+    const brand = await readBrandSettings()
     const [briefs, performance, dismissed] = await Promise.all([
       kvGet('briefs', BRIEFS_SEED),
       kvGet('performance', PERF_SEED),
