@@ -46,6 +46,7 @@ export default function ContentStudio() {
   const router = useRouter()
   const [activeSection, setActiveSection] = useState('process-request')
   const [designBriefId, setDesignBriefId] = useState(null)
+  const [briefPrefill, setBriefPrefill] = useState(null)
 
   // Read ?section and ?briefId from URL on first load
   useEffect(() => {
@@ -53,6 +54,11 @@ export default function ContentStudio() {
     if (router.query.section) setActiveSection(router.query.section)
     if (router.query.briefId) setDesignBriefId(String(router.query.briefId))
   }, [router.isReady])
+
+  function handleOpenAsBrief(suggestion) {
+    setBriefPrefill(suggestion)
+    setActiveSection('process-request')
+  }
 
   const current = SECTIONS.find((s) => s.id === activeSection)
 
@@ -113,10 +119,10 @@ export default function ContentStudio() {
         <div className="flex-1 min-w-0 bg-white overflow-auto">
           {activeSection === 'process-request' && (
             <div className="p-8">
-              <RequestBrief />
+              <RequestBrief key={briefPrefill?.id || 'default'} initialValues={briefPrefill} />
             </div>
           )}
-          {activeSection === 'brainstorm'  && <BrainstormChat />}
+          {activeSection === 'brainstorm'  && <BrainstormChat onOpenAsBrief={handleOpenAsBrief} />}
           {activeSection === 'calendar'    && <EditorialCalendar />}
           {activeSection === 'media'       && <MediaLibrary />}
           {activeSection === 'design'      && (

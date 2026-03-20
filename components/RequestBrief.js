@@ -73,21 +73,39 @@ function CopyButton({ text }) {
   )
 }
 
-export default function RequestBrief() {
-  const [form, setForm] = useState({
-    description: '',
-    deadline: '',
-    audience: '',
-    goal: '',
-    url: '',
-    suggestedCopy: '',
-    clouds: [],
-    platforms: [...ALL_PLATFORM_IDS],
-    // UTM fields
-    utmCampaign: '',
-    utmContent: '',
-    utmTerm: '',
-    utmIsPromoted: false,
+// Map suggestion campaign ID → cloud name
+const CAMPAIGN_TO_CLOUD = {
+  environment: 'Environmental',
+  safety: 'Safety',
+}
+
+// Map suggestion platform strings → form platform IDs
+function suggestionPlatformsToIds(platforms) {
+  const map = { twitter: 'x' }
+  return (platforms || []).map((p) => map[p] || p).filter((id) => ALL_PLATFORM_IDS.includes(id))
+}
+
+export default function RequestBrief({ initialValues }) {
+  const [form, setForm] = useState(() => {
+    if (!initialValues) {
+      return {
+        description: '', deadline: '', audience: '', goal: '', url: '',
+        suggestedCopy: '', clouds: [], platforms: [...ALL_PLATFORM_IDS],
+        utmCampaign: '', utmContent: '', utmTerm: '', utmIsPromoted: false,
+      }
+    }
+    const ids = suggestionPlatformsToIds(initialValues.platforms)
+    const cloud = CAMPAIGN_TO_CLOUD[initialValues.suggestedCampaign] || ''
+    return {
+      description: initialValues.suggestedAngle || '',
+      deadline: '',
+      audience: initialValues.targetAudience || '',
+      goal: initialValues.pillar || '',
+      url: '', suggestedCopy: '',
+      clouds: cloud ? [cloud] : [],
+      platforms: ids.length > 0 ? ids : [...ALL_PLATFORM_IDS],
+      utmCampaign: '', utmContent: '', utmTerm: '', utmIsPromoted: false,
+    }
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)

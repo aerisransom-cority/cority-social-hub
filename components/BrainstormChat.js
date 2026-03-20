@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import SuggestionsPanel from './SuggestionsPanel'
 
 const STARTERS = [
   'Help me brainstorm a meme about EHS teams drowning in spreadsheets.',
@@ -38,7 +39,7 @@ function Message({ msg }) {
   )
 }
 
-export default function BrainstormChat() {
+export default function BrainstormChat({ onOpenAsBrief }) {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -102,13 +103,23 @@ export default function BrainstormChat() {
       {/* Chat area */}
       <div className="flex-1 overflow-y-auto px-6 py-6">
         {isEmpty ? (
-          <div className="h-full flex flex-col items-center justify-center">
-            <div className="text-3xl mb-4">✍️</div>
-            <p className="text-sm font-medium text-black mb-1">Start brainstorming</p>
-            <p className="text-xs text-black/40 font-[350] mb-6 text-center max-w-xs">
-              Ask anything — angles, drafts, hooks, meme ideas, scripts, or strategy questions. Fully brand-aware.
-            </p>
-            <div className="flex flex-col gap-2 w-full max-w-md">
+          <div className="flex flex-col">
+            <SuggestionsPanel
+              onOpenAsBrief={onOpenAsBrief || (() => {})}
+              onTryInChat={(angle) => {
+                setInput(angle)
+                setTimeout(() => textareaRef.current?.focus(), 0)
+              }}
+            />
+            <div style={{ borderTop: '0.75px solid #D9D8D6', marginBottom: 20 }} />
+            <div className="flex flex-col items-center text-center mb-4">
+              <div className="text-3xl mb-3">✍️</div>
+              <p className="text-sm font-medium text-black mb-1">Start brainstorming</p>
+              <p className="text-xs text-black/40 font-[350] mb-4 max-w-xs">
+                Ask anything — angles, drafts, hooks, meme ideas, scripts, or strategy questions. Fully brand-aware.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 w-full max-w-md mx-auto">
               {STARTERS.map((s) => (
                 <button
                   key={s}
