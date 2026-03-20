@@ -42,11 +42,11 @@ export default async function handler(req, res) {
       const isPdf = mimeType === 'application/pdf' || file.originalFilename?.toLowerCase().endsWith('.pdf')
 
       if (isPdf) {
-        // pdf-parse is marked as a webpack external in next.config.js so it is
-        // required at runtime rather than bundled — safe on Vercel serverless.
-        const pdfParse = require('pdf-parse')
-        const parsed = await pdfParse(buffer)
-        text = parsed.text
+        // unpdf is built for serverless/edge — no browser API dependencies.
+        // extractText returns { text: string[] } — one string per page.
+        const { extractText } = await import('unpdf')
+        const { text: pages } = await extractText(new Uint8Array(buffer))
+        text = pages.join('\n\n')
       } else {
         text = buffer.toString('utf-8')
       }
