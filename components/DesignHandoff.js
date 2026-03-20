@@ -182,26 +182,12 @@ export default function DesignHandoff({ initialBriefId }) {
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          {selectedBrief && platforms.length > 0 ? (
-            platforms.map((platform) => (
-              <button
-                key={platform}
-                className="btn-primary"
-                onClick={() => handleOpenDesignTool(platform)}
-              >
-                Open Design Tool · {PLATFORM_LABEL[platform] || platform} ↗
-              </button>
-            ))
-          ) : (
-            <button
-              className="btn-primary"
-              onClick={() => handleOpenDesignTool(null)}
-            >
-              Open Design Tool ↗
-            </button>
-          )}
-        </div>
+        <button
+          className="btn-primary"
+          onClick={() => handleOpenDesignTool(selectedBrief?.id ? platforms[0] || null : null)}
+        >
+          Open Design Tool ↗
+        </button>
       </div>
 
     </div>

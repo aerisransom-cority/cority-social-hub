@@ -1,28 +1,15 @@
-import fs from 'fs'
 import path from 'path'
 import formidable from 'formidable'
 import * as XLSX from 'xlsx'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from './auth/[...nextauth]'
+import { kvGet, kvSet } from '../../lib/kv'
 
 export const config = { api: { bodyParser: false } }
 
-const TMP_PERF    = '/tmp/performance.json'
 const SEED_PERF   = path.join(process.cwd(), 'data', 'performance.json')
-const TMP_UTMS    = '/tmp/utms.json'
 const SEED_UTMS   = path.join(process.cwd(), 'data', 'utms.json')
-const TMP_BRIEFS  = '/tmp/briefs.json'
 const SEED_BRIEFS = path.join(process.cwd(), 'data', 'briefs.json')
-
-function readJson(tmp, seed) {
-  try { return JSON.parse(fs.readFileSync(tmp, 'utf-8')) } catch {}
-  try { return JSON.parse(fs.readFileSync(seed, 'utf-8')) } catch {}
-  return []
-}
-
-function writePerf(data) {
-  fs.writeFileSync(TMP_PERF, JSON.stringify(data, null, 2))
-}
 
 // Normalize a header key: lowercase, strip non-alphanumeric (except spaces)
 function normalizeKey(k) {
@@ -386,7 +373,7 @@ export default async function handler(req, res) {
 
   // GET — return filtered records
   if (req.method === 'GET') {
-    const records = readJson(TMP_PERF, SEED_PERF)
+    const records = await kvGet('performance', SEED_PERF)
     const { platform, dateFrom, dateTo, type } = req.query
     let filtered = records
     if (platform) filtered = filtered.filter((r) => r.platform === platform.toLowerCase())
@@ -398,7 +385,7 @@ export default async function handler(req, res) {
 
   // DELETE — clear all records
   if (req.method === 'DELETE') {
-    writePerf([])
+    await kvSet('performance', [])
     return res.status(200).json({ cleared: true })
   }
 
@@ -441,8 +428,8 @@ export default async function handler(req, res) {
 
     if (!rows.length) return res.status(400).json({ error: 'XLSX file is empty or has no data rows.' })
 
-    const utms   = readJson(TMP_UTMS, SEED_UTMS)
-    const briefs = readJson(TMP_BRIEFS, SEED_BRIEFS)
+    const utms   = await kvGet('utms', SEED_UTMS)
+    const briefs = await kvGet('briefs', SEED_BRIEFS)
 
     const normalized = normalizeRows(platform, rows)
     const importedAt = new Date().toISOString()
@@ -464,7 +451,7 @@ export default async function handler(req, res) {
       }
     })
 
-    const existing = readJson(TMP_PERF, SEED_PERF)
+    const existing = await kvGet('performance', SEED_PERF)
 
     // Phase 1: no mode — detect duplicates, do not save
     if (!mode) {
@@ -479,7 +466,7 @@ export default async function handler(req, res) {
       }
       // No duplicates — save immediately
       const combined = [...existing, ...enriched]
-      writePerf(combined)
+      await kvSet('performance', combined)
       return res.status(200).json({
         imported: enriched.length,
         matched,
@@ -498,7 +485,7 @@ export default async function handler(req, res) {
         return !isdup
       })
       const combined = [...notReplaced, ...enriched]
-      writePerf(combined)
+      await kvSet('performance', combined)
       return res.status(200).json({
         imported: enriched.length,
         matched,
@@ -517,7 +504,7 @@ export default async function handler(req, res) {
         return !isdup
       })
       const combined = [...existing, ...newOnly]
-      writePerf(combined)
+      await kvSet('performance', combined)
       return res.status(200).json({
         imported: newOnly.length,
         matched: newOnly.filter((r) => r.attributed).length,

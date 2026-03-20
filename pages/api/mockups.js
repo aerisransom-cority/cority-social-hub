@@ -1,16 +1,9 @@
-import fs from 'fs'
 import path from 'path'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from './auth/[...nextauth]'
+import { kvGet, kvSet } from '../../lib/kv'
 
-const TMP_MOCKUPS  = '/tmp/mockups.json'
-const SEED_MOCKUPS = path.join(process.cwd(), 'data', 'mockups.json')
-
-function readMockups() {
-  try { return JSON.parse(fs.readFileSync(TMP_MOCKUPS, 'utf-8')) } catch {}
-  try { return JSON.parse(fs.readFileSync(SEED_MOCKUPS, 'utf-8')) } catch {}
-  return []
-}
+const SEED = path.join(process.cwd(), 'data', 'mockups.json')
 
 export default async function handler(req, res) {
   const session = await getServerSession(req, res, authOptions)
@@ -24,11 +17,9 @@ export default async function handler(req, res) {
       briefId: briefId || null,
       platform: platform || null,
     }
-    const existing = readMockups()
+    const existing = await kvGet('mockups', SEED)
     existing.unshift(entry)
-    try {
-      fs.writeFileSync(TMP_MOCKUPS, JSON.stringify(existing, null, 2))
-    } catch {}
+    await kvSet('mockups', existing)
     return res.status(200).json(entry)
   }
 

@@ -1,20 +1,9 @@
-import fs from 'fs'
-import path from 'path'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from './auth/[...nextauth]'
+import { kvGet, kvSet } from '../../lib/kv'
+import path from 'path'
 
-const TMP_PATH  = '/tmp/utms.json'
-const SEED_PATH = path.join(process.cwd(), 'data', 'utms.json')
-
-function readUtms() {
-  try { return JSON.parse(fs.readFileSync(TMP_PATH, 'utf-8')) } catch {}
-  try { return JSON.parse(fs.readFileSync(SEED_PATH, 'utf-8')) } catch {}
-  return []
-}
-
-function writeUtms(data) {
-  fs.writeFileSync(TMP_PATH, JSON.stringify(data, null, 2))
-}
+const SEED = path.join(process.cwd(), 'data', 'utms.json')
 
 function toCSV(utms) {
   const headers = ['Date Created', 'Base URL', 'Source', 'Medium', 'Campaign', 'Content', 'Term', 'Brief ID', 'Full UTM URL']
@@ -34,7 +23,7 @@ export default async function handler(req, res) {
   if (!session) return res.status(401).json({ error: 'Unauthorized' })
 
   if (req.method === 'GET') {
-    const utms = readUtms()
+    const utms = await kvGet('utms', SEED)
     if (req.query.export === 'csv') {
       res.setHeader('Content-Type', 'text/csv')
       res.setHeader('Content-Disposition', 'attachment; filename="utms.csv"')
@@ -51,18 +40,14 @@ export default async function handler(req, res) {
     const entry = {
       id: Date.now().toString(),
       date: new Date().toISOString(),
-      baseUrl,
-      source,
-      medium,
-      campaign,
-      content,
+      baseUrl, source, medium, campaign, content,
       term: term || null,
       briefId: briefId || null,
       fullUrl: fullUrl || baseUrl,
     }
-    const utms = readUtms()
+    const utms = await kvGet('utms', SEED)
     utms.unshift(entry)
-    writeUtms(utms)
+    await kvSet('utms', utms)
     return res.status(201).json(entry)
   }
 

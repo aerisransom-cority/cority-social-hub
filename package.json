@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.24.3",
+    "@upstash/redis": "^1.37.0",
     "formidable": "^3.5.4",
     "next": "^16.2.0",
     "next-auth": "^4.24.13",

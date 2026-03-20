@@ -3,9 +3,11 @@ import path from 'path'
 import Anthropic from '@anthropic-ai/sdk'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from './auth/[...nextauth]'
+import { kvGet, kvSet } from '../../lib/kv'
 
-const BRAND_PATH = path.join(process.cwd(), 'data', 'brand-settings.json')
-const HISTORY_PATH = path.join(process.cwd(), 'data', 'chat-history.json')
+// Brand settings stay as a committed file — not in KV
+const TMP_BRAND  = '/tmp/brand-settings.json'
+const SEED_BRAND = path.join(process.cwd(), 'data', 'brand-settings.json')
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end('Method Not Allowed')
@@ -22,9 +24,13 @@ export default async function handler(req, res) {
 
   let brandSettings
   try {
-    brandSettings = JSON.parse(fs.readFileSync(BRAND_PATH, 'utf-8'))
+    brandSettings = JSON.parse(fs.readFileSync(TMP_BRAND, 'utf-8'))
   } catch {
-    return res.status(500).json({ error: 'Could not load brand settings.' })
+    try {
+      brandSettings = JSON.parse(fs.readFileSync(SEED_BRAND, 'utf-8'))
+    } catch {
+      return res.status(500).json({ error: 'Could not load brand settings.' })
+    }
   }
 
   const systemPrompt = `${brandSettings.aiSystemPrompt}
@@ -41,16 +47,12 @@ You are also a strategic creative partner for Cority's social media manager. Hel
       messages: messages.map((m) => ({ role: m.role, content: m.content })),
     })
 
-    const assistantMessage = {
-      role: 'assistant',
-      content: response.content[0].text,
-    }
+    const assistantMessage = { role: 'assistant', content: response.content[0].text }
 
-    // Save session to history (non-fatal)
+    // Save session to KV history (non-fatal)
     try {
       const sid = sessionId || Date.now().toString()
-      let history = []
-      try { history = JSON.parse(fs.readFileSync(HISTORY_PATH, 'utf-8')) } catch {}
+      const history = await kvGet('chat-history', null) || []
       const existingIdx = history.findIndex((s) => s.id === sid)
       const updatedSession = {
         id: sid,
@@ -62,8 +64,7 @@ You are also a strategic creative partner for Cority's social media manager. Hel
       } else {
         history.unshift(updatedSession)
       }
-      // Keep last 50 sessions
-      fs.writeFileSync(HISTORY_PATH, JSON.stringify(history.slice(0, 50), null, 2))
+      await kvSet('chat-history', history.slice(0, 50))
     } catch {}
 
     return res.status(200).json({ message: assistantMessage })

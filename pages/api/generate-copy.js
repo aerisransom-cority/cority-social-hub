@@ -1,14 +1,12 @@
 import fs from 'fs'
 import path from 'path'
 import Anthropic from '@anthropic-ai/sdk'
+import { kvGet, kvSet } from '../../lib/kv'
 
-// Vercel's data/ directory is read-only. All writes use /tmp (writable, ephemeral).
-// Reads try /tmp first, then fall back to committed seed files in data/.
+// Brand settings stay as a committed file — reads /tmp (user-modified) then data/ seed
 const TMP_BRAND    = '/tmp/brand-settings.json'
-const TMP_BRIEFS   = '/tmp/briefs.json'
-const TMP_CALENDAR = '/tmp/calendar.json'
-const SEED_BRAND    = path.join(process.cwd(), 'data', 'brand-settings.json')
-const SEED_BRIEFS   = path.join(process.cwd(), 'data', 'briefs.json')
+const SEED_BRAND   = path.join(process.cwd(), 'data', 'brand-settings.json')
+const SEED_BRIEFS  = path.join(process.cwd(), 'data', 'briefs.json')
 const SEED_CALENDAR = path.join(process.cwd(), 'data', 'calendar.json')
 
 export default async function handler(req, res) {
@@ -28,7 +26,7 @@ export default async function handler(req, res) {
     })
   }
 
-  // Load brand settings — prefer /tmp (user-saved) over committed seed
+  // Brand settings: /tmp (user-modified) → committed data/ seed
   let brandSettings
   try {
     brandSettings = JSON.parse(fs.readFileSync(TMP_BRAND, 'utf-8'))
@@ -40,7 +38,6 @@ export default async function handler(req, res) {
     }
   }
 
-  // Use provided platforms or default to all five
   const selectedPlatforms = platforms?.length
     ? platforms
     : ['linkedin', 'instagram', 'x', 'facebook', 'youtube']
@@ -55,7 +52,6 @@ export default async function handler(req, res) {
     clouds?.length ? `Related Cority clouds/products: ${clouds.join(', ')}` : null,
   ].filter(Boolean)
 
-  // Build JSON template for only the selected platforms
   const PLATFORM_SCHEMA = {
     linkedin:  `"linkedin":  { "copy": "...", "notes": "..." }`,
     instagram: `"instagram": { "copy": "...", "notes": "..." }`,
@@ -99,18 +95,13 @@ ${guidelines}`
     })
 
     const rawText = message.content[0].text.trim()
-    // Strip markdown code fences if Claude adds them despite instructions
     const jsonText = rawText.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim()
     const variants = JSON.parse(jsonText)
 
-    // Save brief (non-fatal if it fails)
     const brief = {
       id: Date.now(),
       createdAt: new Date().toISOString(),
-      description,
-      deadline,
-      audience,
-      goal,
+      description, deadline, audience, goal,
       url: url || null,
       suggestedCopy: suggestedCopy || null,
       clouds: clouds || [],
@@ -118,24 +109,14 @@ ${guidelines}`
       variants,
     }
 
-    // Save brief to /tmp (Vercel's data/ is read-only; /tmp is writable)
+    // Save brief to KV (non-fatal)
     try {
-      let existing = []
-      try { existing = JSON.parse(fs.readFileSync(TMP_BRIEFS, 'utf-8')) } catch {}
-      // If /tmp is empty, seed from committed data so existing briefs are preserved
-      if (existing.length === 0) {
-        try { existing = JSON.parse(fs.readFileSync(SEED_BRIEFS, 'utf-8')) } catch {}
-      }
+      const existing = await kvGet('briefs', SEED_BRIEFS)
       existing.unshift(brief)
-      fs.writeFileSync(TMP_BRIEFS, JSON.stringify(existing, null, 2))
-    } catch {
-      // Non-fatal
-    }
+      await kvSet('briefs', existing)
+    } catch {}
 
-    // Sync to calendar — calendar.js mergedCalendar() will pick this up from
-    // /tmp/briefs.json, so no explicit calendar write is needed. Writing here
-    // anyway to handle the edge case where the brief write above succeeded but
-    // the calendar read happens before /tmp/briefs.json is available.
+    // Sync to calendar (non-fatal)
     try {
       const PLATFORM_LABEL = { linkedin: 'LinkedIn', instagram: 'Instagram', x: 'X', facebook: 'Facebook', youtube: 'YouTube' }
       const firstPlatform = PLATFORM_LABEL[selectedPlatforms[0]] || selectedPlatforms[0]
@@ -150,19 +131,13 @@ ${guidelines}`
         briefId: brief.id,
         notes: `Auto-added from brief. Audience: ${audience}. Goal: ${goal}.`,
       }
-      let calendar = []
-      try { calendar = JSON.parse(fs.readFileSync(TMP_CALENDAR, 'utf-8')) } catch {}
-      if (calendar.length === 0) {
-        try { calendar = JSON.parse(fs.readFileSync(SEED_CALENDAR, 'utf-8')) } catch {}
-      }
+      const calendar = await kvGet('calendar', SEED_CALENDAR)
       const alreadyExists = calendar.some((e) => String(e.briefId) === String(brief.id))
       if (!alreadyExists) {
         calendar.push(calendarEntry)
-        fs.writeFileSync(TMP_CALENDAR, JSON.stringify(calendar, null, 2))
+        await kvSet('calendar', calendar)
       }
-    } catch {
-      // Non-fatal — calendar sync failure doesn't block copy generation
-    }
+    } catch {}
 
     return res.status(200).json({ variants, briefId: brief.id })
   } catch (err) {

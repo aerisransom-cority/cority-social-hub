@@ -1,13 +1,8 @@
-import fs from 'fs'
 import path from 'path'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from './auth/[...nextauth]'
+import { kvGet, kvSet } from '../../lib/kv'
 
-// Vercel's data/ directory is read-only (build artifact). All writes go to /tmp
-// (writable, ephemeral between cold starts). Reads try /tmp first, then fall
-// back to the committed seed files in data/.
-const TMP_CALENDAR = '/tmp/calendar.json'
-const TMP_BRIEFS   = '/tmp/briefs.json'
 const SEED_CALENDAR = path.join(process.cwd(), 'data', 'calendar.json')
 const SEED_BRIEFS   = path.join(process.cwd(), 'data', 'briefs.json')
 
@@ -16,26 +11,12 @@ const PLATFORM_LABEL = {
   x: 'X', facebook: 'Facebook', youtube: 'YouTube',
 }
 
-function readCalendar() {
-  try { return JSON.parse(fs.readFileSync(TMP_CALENDAR, 'utf-8')) } catch {}
-  try { return JSON.parse(fs.readFileSync(SEED_CALENDAR, 'utf-8')) } catch {}
-  return []
-}
-function writeCalendar(data) {
-  fs.writeFileSync(TMP_CALENDAR, JSON.stringify(data, null, 2))
-}
-
 // Synthesise calendar entries from briefs that don't already have an explicit entry.
-function mergedCalendar() {
-  const explicit = readCalendar()
+async function mergedCalendar() {
+  const explicit = await kvGet('calendar', SEED_CALENDAR)
   const explicitBriefIds = new Set(explicit.map((e) => String(e.briefId)).filter(Boolean))
 
-  // Read briefs from /tmp first (new submissions), fall back to committed seed
-  let briefs = []
-  try { briefs = JSON.parse(fs.readFileSync(TMP_BRIEFS, 'utf-8')) } catch {}
-  if (briefs.length === 0) {
-    try { briefs = JSON.parse(fs.readFileSync(SEED_BRIEFS, 'utf-8')) } catch {}
-  }
+  const briefs = await kvGet('briefs', SEED_BRIEFS)
 
   const synthetic = briefs
     .filter((b) => b.deadline && !explicitBriefIds.has(String(b.id)))
@@ -61,7 +42,7 @@ export default async function handler(req, res) {
   if (!session) return res.status(401).json({ error: 'Unauthorized' })
 
   if (req.method === 'GET') {
-    return res.status(200).json(mergedCalendar())
+    return res.status(200).json(await mergedCalendar())
   }
 
   if (req.method === 'POST') {
@@ -79,44 +60,42 @@ export default async function handler(req, res) {
       copy: copy || null,
       notes: notes || null,
     }
-    const calendar = readCalendar()
+    const calendar = await kvGet('calendar', SEED_CALENDAR)
     calendar.push(entry)
-    writeCalendar(calendar)
+    await kvSet('calendar', calendar)
     return res.status(201).json(entry)
   }
 
   if (req.method === 'PATCH') {
     const { id, ...updates } = req.body
     if (!id) return res.status(400).json({ error: 'id is required.' })
-    const calendar = readCalendar()
+    const calendar = await kvGet('calendar', SEED_CALENDAR)
     const idx = calendar.findIndex((e) => e.id === id)
     if (idx === -1) {
-      // Upsert: synthetic brief entries (id = "brief-{briefId}") aren't stored in
-      // calendar.json until first edited. Promote them to explicit entries here.
+      // Upsert: synthetic brief entries aren't stored until first edited
       const briefId = String(id).startsWith('brief-')
         ? (isNaN(id.replace('brief-', '')) ? id.replace('brief-', '') : Number(id.replace('brief-', '')))
         : null
       const newEntry = {
-        id,
-        briefId,
+        id, briefId,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         ...updates,
       }
       calendar.push(newEntry)
-      writeCalendar(calendar)
+      await kvSet('calendar', calendar)
       return res.status(200).json(newEntry)
     }
     calendar[idx] = { ...calendar[idx], ...updates, updatedAt: new Date().toISOString() }
-    writeCalendar(calendar)
+    await kvSet('calendar', calendar)
     return res.status(200).json(calendar[idx])
   }
 
   if (req.method === 'DELETE') {
     const { id } = req.query
     if (!id) return res.status(400).json({ error: 'id is required.' })
-    const calendar = readCalendar()
-    writeCalendar(calendar.filter((e) => e.id !== id))
+    const calendar = await kvGet('calendar', SEED_CALENDAR)
+    await kvSet('calendar', calendar.filter((e) => e.id !== id))
     return res.status(200).json({ success: true })
   }
 

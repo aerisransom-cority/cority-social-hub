@@ -3,11 +3,11 @@ What this is
 A personal social media command center for Cority's social media manager. A hosted Next.js web app (deployed on Vercel) that streamlines the full creative workflow: request briefs, AI copy drafting, brainstorm chat, visual mockups, UTM management, and performance tracking.
 Solo user. Non-technical operator. File-based persistence (JSON/CSV, no database).
 Tech stack
-* Framework: Next.js 14 (pages router)
+* Framework: Next.js 16 (pages router)
 * Styling: Tailwind CSS
 * AI: Claude API (claude-sonnet-4-20250514) via Anthropic SDK
 * Graphics: HTML/CSS templates → PNG export (html2canvas) + Figma-ready
-* Data: JSON files + CSV export (no database)
+* Data: Upstash Redis (via @upstash/redis) for all mutable data (briefs, calendar, utms, performance, chat-history, mockups). Falls back to /tmp for local dev. brand-settings.json stays as a committed file (Cority default, resets on deploy). CSV export for UTMs and performance.
 * Hosting: Vercel (connected to GitHub)
 * Auth: None (solo user)
 Build phases
