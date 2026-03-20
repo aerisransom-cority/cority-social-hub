@@ -60,6 +60,30 @@ export default async function handler(req, res) {
     })
   }
 
+  // PATCH — update user name, email, or role (admin editing someone else)
+  if (req.method === 'PATCH') {
+    const { id, name, email, role } = req.body
+    if (!id) return res.status(400).json({ error: 'id is required' })
+
+    const users = await kvGet('users', null)
+    const list = Array.isArray(users) ? users : []
+    const idx = list.findIndex((u) => u.id === id)
+    if (idx === -1) return res.status(404).json({ error: 'User not found' })
+
+    if (name?.trim()) list[idx].name = name.trim()
+    if (email?.trim()) {
+      const normalised = email.trim().toLowerCase()
+      const conflict = list.some((u, i) => i !== idx && u.email === normalised)
+      if (conflict) return res.status(409).json({ error: 'That email is already in use' })
+      list[idx].email = normalised
+    }
+    if (role && ['contributor', 'reviewer'].includes(role)) list[idx].role = role
+
+    await kvSet('users', list)
+    const { passwordHash, passwordSalt, ...safe } = list[idx]
+    return res.status(200).json(safe)
+  }
+
   // DELETE — remove user by id
   if (req.method === 'DELETE') {
     const { id } = req.body
@@ -77,6 +101,6 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true })
   }
 
-  res.setHeader('Allow', ['GET', 'POST', 'DELETE'])
+  res.setHeader('Allow', ['GET', 'POST', 'PATCH', 'DELETE'])
   return res.status(405).end('Method Not Allowed')
 }

@@ -45,7 +45,13 @@ export const authOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
+      // session.update() called client-side (e.g. after profile name change)
+      if (trigger === 'update' && session) {
+        if (session.name) token.name = session.name
+        if (session.email) token.email = session.email
+      }
+
       if (user) {
         // Called at sign-in — embed role, name, id into the JWT
         token.role = user.role
@@ -71,6 +77,7 @@ export const authOptions = {
       if (token) {
         session.user.role = token.role
         session.user.name = token.name
+        session.user.email = token.email
         session.user.id = token.id
         session.user.revoked = token.revoked || false
       }

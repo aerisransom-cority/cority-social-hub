@@ -9,10 +9,7 @@ function RoleBadge({ role }) {
   }
   const s = styles[role] || styles.reviewer
   return (
-    <span style={{
-      fontSize: 10, fontWeight: 500, textTransform: 'capitalize',
-      color: s.color, background: s.bg, borderRadius: 3, padding: '2px 7px',
-    }}>
+    <span style={{ fontSize: 10, fontWeight: 500, textTransform: 'capitalize', color: s.color, background: s.bg, borderRadius: 3, padding: '2px 7px' }}>
       {role}
     </span>
   )
@@ -21,32 +18,20 @@ function RoleBadge({ role }) {
 function TempPasswordModal({ password, onClose }) {
   const [copied, setCopied] = useState(false)
   function copy() {
-    navigator.clipboard.writeText(password).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    })
+    navigator.clipboard.writeText(password).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000) })
   }
   return (
-    <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200,
-    }}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 400 }}>
       <div className="card p-8" style={{ width: 420, maxWidth: '90vw' }}>
         <h2 className="text-base font-medium text-black mb-2">User created</h2>
         <p className="text-sm text-black/50 font-[350] mb-5 leading-relaxed">
           Share this temporary password with the user — it will not be shown again.
-          They can log in and continue using this password; there is no forced reset.
         </p>
-        <div
-          className="p-4 font-mono text-sm text-black text-center"
-          style={{ border: '0.79px solid #D9D8D6', borderRadius: 6, background: '#FAFAFA', letterSpacing: '0.12em', userSelect: 'all' }}
-        >
+        <div className="p-4 font-mono text-sm text-black text-center" style={{ border: '0.79px solid #D9D8D6', borderRadius: 6, background: '#FAFAFA', letterSpacing: '0.12em', userSelect: 'all' }}>
           {password}
         </div>
         <div className="flex gap-3 mt-5">
-          <button className="btn-secondary flex-1" onClick={copy}>
-            {copied ? '✓ Copied' : 'Copy password'}
-          </button>
+          <button className="btn-secondary flex-1" onClick={copy}>{copied ? '✓ Copied' : 'Copy password'}</button>
           <button className="btn-primary flex-1" onClick={onClose}>Done</button>
         </div>
       </div>
@@ -54,10 +39,69 @@ function TempPasswordModal({ password, onClose }) {
   )
 }
 
+// Inline edit row for a single user
+function EditRow({ user, onSave, onCancel }) {
+  const [name, setName] = useState(user.name)
+  const [email, setEmail] = useState(user.email)
+  const [role, setRole] = useState(user.role)
+  const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState(null)
+
+  async function save() {
+    setSaving(true)
+    setErr(null)
+    try {
+      const res = await fetch('/api/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: user.id, name, email, role }),
+      })
+      const data = await res.json()
+      if (res.ok) { onSave(data) }
+      else setErr(data.error || 'Save failed')
+    } catch { setErr('Network error') }
+    setSaving(false)
+  }
+
+  return (
+    <>
+      <tr style={{ background: '#FFFDF9', borderBottom: err ? 'none' : '0.75px solid #D9D8D6' }}>
+        <td style={{ padding: '8px 8px 8px 24px' }}>
+          <input className="input" value={name} onChange={e => setName(e.target.value)} style={{ fontSize: 12, padding: '4px 8px' }} />
+        </td>
+        <td style={{ padding: '8px' }}>
+          <input type="email" className="input" value={email} onChange={e => setEmail(e.target.value)} style={{ fontSize: 12, padding: '4px 8px' }} />
+        </td>
+        <td style={{ padding: '8px' }}>
+          <select className="input" value={role} onChange={e => setRole(e.target.value)} style={{ fontSize: 12, padding: '4px 8px' }}>
+            <option value="contributor">Contributor</option>
+            <option value="reviewer">Reviewer</option>
+          </select>
+        </td>
+        <td style={{ padding: '8px', fontSize: 12, color: 'rgba(0,0,0,0.35)' }}>
+          {user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-CA') : '—'}
+        </td>
+        <td style={{ padding: '8px 16px', whiteSpace: 'nowrap' }}>
+          <button onClick={save} disabled={saving} style={{ fontSize: 11, color: '#D35F0B', background: 'none', border: 'none', cursor: 'pointer', marginRight: 8, fontWeight: 500 }}>
+            {saving ? 'Saving…' : 'Save'}
+          </button>
+          <button onClick={onCancel} style={{ fontSize: 11, color: 'rgba(0,0,0,0.35)', background: 'none', border: 'none', cursor: 'pointer' }}>Cancel</button>
+        </td>
+      </tr>
+      {err && (
+        <tr style={{ borderBottom: '0.75px solid #D9D8D6' }}>
+          <td colSpan={5} style={{ padding: '4px 24px 8px', fontSize: 11, color: '#B91C1C' }}>{err}</td>
+        </tr>
+      )}
+    </>
+  )
+}
+
 export default function UserManagement() {
   const { data: session } = useSession()
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
+  const [editingId, setEditingId] = useState(null)
   const [form, setForm] = useState({ name: '', email: '', role: 'contributor' })
   const [adding, setAdding] = useState(false)
   const [tempPassword, setTempPassword] = useState(null)
@@ -93,9 +137,7 @@ export default function UserManagement() {
       } else {
         setError(data.error || 'Failed to add user')
       }
-    } catch {
-      setError('Network error — please try again')
-    }
+    } catch { setError('Network error — please try again') }
     setAdding(false)
   }
 
@@ -129,51 +171,48 @@ export default function UserManagement() {
               <thead>
                 <tr style={{ background: '#FAFAFA', borderBottom: '0.75px solid #D9D8D6' }}>
                   {['Name', 'Email', 'Role', 'Date Added', ''].map((h, i) => (
-                    <th key={i} style={{
-                      padding: '8px 16px', textAlign: 'left', fontSize: 9,
-                      fontWeight: 500, textTransform: 'uppercase', letterSpacing: '1.38px',
-                      color: 'rgba(0,0,0,0.4)', whiteSpace: 'nowrap',
-                      paddingLeft: i === 0 ? 24 : 16,
-                    }}>
+                    <th key={i} style={{ padding: '8px 16px', textAlign: 'left', fontSize: 9, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '1.38px', color: 'rgba(0,0,0,0.4)', whiteSpace: 'nowrap', paddingLeft: i === 0 ? 24 : 16 }}>
                       {h}
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {/* Hardcoded admin row */}
+                {/* Admin row — not editable */}
                 <tr style={{ borderBottom: '0.75px solid #D9D8D6' }}>
-                  <td style={{ padding: '10px 16px 10px 24px', fontSize: 13, fontWeight: 500, color: '#000' }}>
-                    {session?.user?.name || 'Admin'}
-                  </td>
-                  <td style={{ padding: '10px 16px', fontSize: 12, color: 'rgba(0,0,0,0.5)' }}>
-                    {session?.user?.email || '—'}
-                  </td>
+                  <td style={{ padding: '10px 16px 10px 24px', fontSize: 13, fontWeight: 500, color: '#000' }}>{session?.user?.name || 'Admin'}</td>
+                  <td style={{ padding: '10px 16px', fontSize: 12, color: 'rgba(0,0,0,0.5)' }}>{session?.user?.email || '—'}</td>
                   <td style={{ padding: '10px 16px' }}><RoleBadge role="admin" /></td>
                   <td style={{ padding: '10px 16px', fontSize: 12, color: 'rgba(0,0,0,0.35)' }}>Always</td>
                   <td style={{ padding: '10px 16px' }} />
                 </tr>
 
                 {/* KV users */}
-                {users.map((u) => (
-                  <tr key={u.id} style={{ borderBottom: '0.75px solid #D9D8D6' }}>
-                    <td style={{ padding: '10px 16px 10px 24px', fontSize: 13, color: '#000' }}>{u.name}</td>
-                    <td style={{ padding: '10px 16px', fontSize: 12, color: 'rgba(0,0,0,0.5)' }}>{u.email}</td>
-                    <td style={{ padding: '10px 16px' }}><RoleBadge role={u.role} /></td>
-                    <td style={{ padding: '10px 16px', fontSize: 12, color: 'rgba(0,0,0,0.35)' }}>
-                      {u.createdAt ? new Date(u.createdAt).toLocaleDateString('en-CA') : '—'}
-                    </td>
-                    <td style={{ padding: '10px 16px' }}>
-                      <button
-                        onClick={() => removeUser(u.id, u.name)}
-                        style={{ fontSize: 11, color: 'rgba(0,0,0,0.3)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 400 }}
-                        className="hover:text-cority-red transition-colors"
-                      >
-                        Remove
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {users.map((u) =>
+                  editingId === u.id ? (
+                    <EditRow
+                      key={u.id}
+                      user={u}
+                      onSave={(updated) => { setUsers((prev) => prev.map((x) => x.id === u.id ? updated : x)); setEditingId(null) }}
+                      onCancel={() => setEditingId(null)}
+                    />
+                  ) : (
+                    <tr key={u.id} style={{ borderBottom: '0.75px solid #D9D8D6' }}>
+                      <td style={{ padding: '10px 16px 10px 24px', fontSize: 13, color: '#000' }}>{u.name}</td>
+                      <td style={{ padding: '10px 16px', fontSize: 12, color: 'rgba(0,0,0,0.5)' }}>{u.email}</td>
+                      <td style={{ padding: '10px 16px' }}><RoleBadge role={u.role} /></td>
+                      <td style={{ padding: '10px 16px', fontSize: 12, color: 'rgba(0,0,0,0.35)' }}>{u.createdAt ? new Date(u.createdAt).toLocaleDateString('en-CA') : '—'}</td>
+                      <td style={{ padding: '10px 16px', whiteSpace: 'nowrap' }}>
+                        <button onClick={() => setEditingId(u.id)} style={{ fontSize: 11, color: 'rgba(0,0,0,0.4)', background: 'none', border: 'none', cursor: 'pointer', marginRight: 10 }} className="hover:text-black transition-colors">
+                          Edit
+                        </button>
+                        <button onClick={() => removeUser(u.id, u.name)} style={{ fontSize: 11, color: 'rgba(0,0,0,0.3)', background: 'none', border: 'none', cursor: 'pointer' }} className="hover:text-cority-red transition-colors">
+                          Remove
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                )}
 
                 {users.length === 0 && (
                   <tr>
@@ -192,54 +231,27 @@ export default function UserManagement() {
       <div className="card p-6">
         <div className="mb-4">
           <p className="font-medium text-black text-sm">Invite a team member</p>
-          <p className="text-xs text-black/40 font-[350] mt-0.5">
-            A temporary password will be generated. Share it directly with the user.
-          </p>
+          <p className="text-xs text-black/40 font-[350] mt-0.5">A temporary password will be generated. Share it directly with the user.</p>
         </div>
-
-        {error && (
-          <p className="text-xs font-[350] mb-3 px-3 py-2 text-cority-red"
-            style={{ border: '0.79px solid #D35F0B', borderRadius: 6 }}>
-            {error}
-          </p>
-        )}
-
+        {error && <p className="text-xs font-[350] mb-3 px-3 py-2 text-cority-red" style={{ border: '0.79px solid #D35F0B', borderRadius: 6 }}>{error}</p>}
         <form onSubmit={addUser}>
           <div className="grid grid-cols-3 gap-3 mb-4">
             <div>
               <label className="section-label">Name <span className="text-cority-red">*</span></label>
-              <input
-                className="input"
-                value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                placeholder="Jane Smith"
-                required
-              />
+              <input className="input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Jane Smith" required />
             </div>
             <div>
               <label className="section-label">Email <span className="text-cority-red">*</span></label>
-              <input
-                type="email"
-                className="input"
-                value={form.email}
-                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                placeholder="jane@cority.com"
-                required
-              />
+              <input type="email" className="input" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="jane@cority.com" required />
             </div>
             <div>
               <label className="section-label">Role</label>
-              <select
-                className="input"
-                value={form.role}
-                onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
-              >
+              <select className="input" value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))}>
                 <option value="contributor">Contributor</option>
                 <option value="reviewer">Reviewer</option>
               </select>
             </div>
           </div>
-
           <div className="flex items-start gap-4">
             <button type="submit" className="btn-primary" disabled={adding || !form.name.trim() || !form.email.trim()}>
               {adding ? 'Adding…' : 'Add user →'}
@@ -252,10 +264,7 @@ export default function UserManagement() {
         </form>
       </div>
 
-      {/* Temp password modal */}
-      {tempPassword && (
-        <TempPasswordModal password={tempPassword} onClose={() => setTempPassword(null)} />
-      )}
+      {tempPassword && <TempPasswordModal password={tempPassword} onClose={() => setTempPassword(null)} />}
     </div>
   )
 }

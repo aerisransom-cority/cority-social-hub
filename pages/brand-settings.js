@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import UserManagement from '../components/UserManagement'
 
 export default function BrandSettings() {
   const [settings, setSettings] = useState(null)
@@ -90,7 +89,6 @@ export default function BrandSettings() {
     { id: 'content', label: 'Content Mix' },
     { id: 'platforms', label: 'Platforms' },
     { id: 'ai-prompt', label: 'AI System Prompt' },
-    { id: 'users', label: 'Users' },
   ]
 
   return (
@@ -466,9 +464,6 @@ export default function BrandSettings() {
               )}
             </div>
           )}
-
-          {/* USERS */}
-          {activeSection === 'users' && <UserManagement />}
 
         </div>
       </div>

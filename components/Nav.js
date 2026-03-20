@@ -1,6 +1,9 @@
+import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
-import { useSession, signOut } from 'next-auth/react'
+import { useSession } from 'next-auth/react'
+import ProfileDropdown from './ProfileDropdown'
+import AccountSettingsModal from './AccountSettingsModal'
 
 const ALL_TABS = [
   { href: '/content-studio', label: 'Content Studio', icon: '✍️', roles: ['admin', 'contributor', 'reviewer'] },
@@ -14,8 +17,10 @@ export default function Nav() {
   const { data: session } = useSession()
   const role = session?.user?.role || 'admin'
   const tabs = ALL_TABS.filter((t) => t.roles.includes(role))
+  const [showAccountSettings, setShowAccountSettings] = useState(false)
 
   return (
+    <>
     <header
       className="bg-white sticky top-0 z-50"
       style={{ borderBottom: '0.75px solid #D9D8D6' }}
@@ -37,15 +42,7 @@ export default function Nav() {
             {new Date().toLocaleDateString('en-CA', { weekday: 'short', month: 'short', day: 'numeric' })}
           </div>
           {session?.user && (
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-black/40 font-[350]">{session.user.name}</span>
-              <button
-                onClick={() => signOut({ callbackUrl: '/login' })}
-                className="text-xs text-black/40 font-[350] hover:text-black transition-colors"
-              >
-                Sign out
-              </button>
-            </div>
+            <ProfileDropdown onOpenAccountSettings={() => setShowAccountSettings(true)} />
           )}
         </div>
       </div>
@@ -73,5 +70,7 @@ export default function Nav() {
         </nav>
       </div>
     </header>
+    {showAccountSettings && <AccountSettingsModal onClose={() => setShowAccountSettings(false)} />}
+    </>
   )
 }
