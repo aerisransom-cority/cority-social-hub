@@ -42,8 +42,9 @@ export default async function handler(req, res) {
       const isPdf = mimeType === 'application/pdf' || file.originalFilename?.toLowerCase().endsWith('.pdf')
 
       if (isPdf) {
-        // Use pdf-parse lib file directly to avoid webpack test-file resolution issues
-        const pdfParse = require('pdf-parse/lib/pdf-parse.js')
+        // pdf-parse is marked as a webpack external in next.config.js so it is
+        // required at runtime rather than bundled — safe on Vercel serverless.
+        const pdfParse = require('pdf-parse')
         const parsed = await pdfParse(buffer)
         text = parsed.text
       } else {
