@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSession } from 'next-auth/react'
 import { SearchableSelect, CAMPAIGNS, CONTENT_TYPES_UTM } from './UTMBuilder'
 
 const CLOUDS = [
@@ -113,6 +114,10 @@ export default function RequestBrief({ initialValues }) {
   const [activeTab, setActiveTab] = useState('linkedin')
   const [platformUtms, setPlatformUtms] = useState({}) // { linkedin: url, instagram: url, ... }
   const [utmExpanded, setUtmExpanded] = useState(false)
+  const [debugPrompt, setDebugPrompt] = useState(null)
+
+  const { data: session } = useSession()
+  const isAdmin = session?.user?.role === 'admin'
 
   function handleField(field, value) {
     setForm((f) => ({ ...f, [field]: value }))
@@ -145,6 +150,7 @@ export default function RequestBrief({ initialValues }) {
     setError(null)
     setResult(null)
     setPlatformUtms({})
+    setDebugPrompt(null)
     try {
       const res = await fetch('/api/generate-copy', {
         method: 'POST',
@@ -163,6 +169,7 @@ export default function RequestBrief({ initialValues }) {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Something went wrong.')
       setResult(data)
+      setDebugPrompt(data.debugPrompt || null)
       const firstTab = PLATFORMS.find((p) => data.variants?.[p.id])?.id || 'linkedin'
       setActiveTab(firstTab)
 
@@ -492,6 +499,16 @@ export default function RequestBrief({ initialValues }) {
                       {result.sourceDocs.map((d) => d.docName).join(', ')}
                     </span>
                   </div>
+                )}
+                {isAdmin && debugPrompt && (
+                  <details style={{ marginTop: 6 }}>
+                    <summary style={{ fontSize: 10, color: 'rgba(0,0,0,0.3)', cursor: 'pointer', userSelect: 'none', listStyle: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <span>▸</span> View prompt
+                    </summary>
+                    <pre style={{ marginTop: 6, fontSize: 10, color: 'rgba(0,0,0,0.5)', background: '#F9F9F9', border: '0.75px solid #E5E5E5', borderRadius: 4, padding: '10px 12px', whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: 320, overflowY: 'auto', fontWeight: 350, lineHeight: 1.5 }}>
+                      {debugPrompt.systemPrompt}
+                    </pre>
+                  </details>
                 )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

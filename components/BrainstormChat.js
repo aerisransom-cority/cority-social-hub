@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import SuggestionsPanel from './SuggestionsPanel'
 
 // ── Tab bar ───────────────────────────────────────────────────────────────────
@@ -23,7 +24,7 @@ function Tab({ label, active, onClick }) {
 }
 
 // ── Chat message ──────────────────────────────────────────────────────────────
-function Message({ msg }) {
+function Message({ msg, isAdmin }) {
   const isUser = msg.role === 'user'
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`}>
@@ -52,6 +53,16 @@ function Message({ msg }) {
             📖 Sources: {msg.sourceDocs.map((d) => d.docName).join(', ')}
           </p>
         )}
+        {!isUser && isAdmin && msg.debugPrompt && (
+          <details style={{ marginTop: 4, paddingLeft: 4 }}>
+            <summary style={{ fontSize: 10, color: 'rgba(0,0,0,0.3)', cursor: 'pointer', userSelect: 'none', listStyle: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <span>▸</span> View prompt
+            </summary>
+            <pre style={{ marginTop: 6, fontSize: 10, color: 'rgba(0,0,0,0.5)', background: '#F9F9F9', border: '0.75px solid #E5E5E5', borderRadius: 4, padding: '10px 12px', whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: 280, overflowY: 'auto', fontWeight: 350, lineHeight: 1.5 }}>
+              {msg.debugPrompt.systemPrompt}
+            </pre>
+          </details>
+        )}
       </div>
     </div>
   )
@@ -59,6 +70,9 @@ function Message({ msg }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 export default function BrainstormChat({ onOpenAsBrief }) {
+  const { data: session } = useSession()
+  const isAdmin = session?.user?.role === 'admin'
+
   // Persist active tab within the browser session
   const [activeTab, setActiveTab] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -107,7 +121,7 @@ export default function BrainstormChat({ onOpenAsBrief }) {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Something went wrong.')
-      const assistantMsg = { ...data.message, sourceDocs: data.sourceDocs || [] }
+      const assistantMsg = { ...data.message, sourceDocs: data.sourceDocs || [], debugPrompt: data.debugPrompt || null }
       setMessages([...updated, assistantMsg])
     } catch (err) {
       setError(err.message)
@@ -169,7 +183,7 @@ export default function BrainstormChat({ onOpenAsBrief }) {
               </div>
             ) : (
               <>
-                {messages.map((msg, i) => <Message key={i} msg={msg} />)}
+                {messages.map((msg, i) => <Message key={i} msg={msg} isAdmin={isAdmin} />)}
                 {loading && (
                   <div className="flex justify-start mb-4">
                     <div

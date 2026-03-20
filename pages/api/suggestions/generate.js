@@ -1,11 +1,14 @@
+import path from 'path'
 import Anthropic from '@anthropic-ai/sdk'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '../auth/[...nextauth]'
 import { kvGet, kvSet } from '../../../lib/kv'
-import { searchKnowledge, formatKnowledgeContext } from '../../../lib/knowledge'
+import { searchKnowledge } from '../../../lib/knowledge'
 import { readBrandSettings } from '../../../lib/brand'
+import { buildPrompt } from '../../../lib/promptBuilder'
+
 const BRIEFS_SEED = path.join(process.cwd(), 'data', 'briefs.json')
-const PERF_SEED = path.join(process.cwd(), 'data', 'performance.json')
+const PERF_SEED   = path.join(process.cwd(), 'data', 'performance.json')
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -46,7 +49,7 @@ export default async function handler(req, res) {
       : []
     const last10Titles = recentBriefs.slice(0, 10).map((b) => b.description?.slice(0, 80)).filter(Boolean)
 
-    // Pillar coverage analysis — count how often each theme appears in recent briefs
+    // Pillar coverage analysis
     const themes = (brand.storytellingThemes || []).map((t) => t.theme)
     const pillarCounts = Object.fromEntries(themes.map((t) => [t, 0]))
     recentBriefs.forEach((b) => { if (b.pillar && pillarCounts[b.pillar] !== undefined) pillarCounts[b.pillar]++ })
@@ -55,7 +58,7 @@ export default async function handler(req, res) {
       .slice(0, 3)
       .map(([theme]) => theme)
 
-    // Performance insights — top content types by engagement rate
+    // Performance insights
     let perfInsights = ''
     if (hasPerformanceData) {
       const byType = {}
@@ -73,7 +76,7 @@ export default async function handler(req, res) {
       if (topTypes.length) perfInsights = `\nTop performing content types from uploaded data: ${topTypes.join(', ')}.`
     }
 
-    // Recently dismissed (last 30) — don't resurface
+    // Recently dismissed
     const recentDismissed = Array.isArray(dismissed)
       ? dismissed.slice(0, 30).map((d) => d.angle || d.id).filter(Boolean)
       : []
@@ -81,31 +84,24 @@ export default async function handler(req, res) {
     // Knowledge base — fetch chunks relevant to underrepresented pillars
     const kbQuery = underrepresented.join(' ')
     const kbChunks = await searchKnowledge(kbQuery, 3)
-    const kbContext = formatKnowledgeContext(kbChunks)
 
-    const voicePillars = (brand.voicePillars || []).map((v) => `${v.name}: ${v.description}`).join('; ')
-    const storyThemes = (brand.storytellingThemes || []).map((t) => `${t.theme} — ${t.description}`).join('; ')
-    const campaigns = (brand.activeCampaigns || []).map((c) => `${c.id} (${c.name}): ${c.themes.join(', ')}`).join('; ')
-    const alwaysOn = (brand.alwaysOnContent || []).join(', ')
-    const highPerf = (brand.contentPerformance?.highPerforming || []).join(', ')
-    const underPerf = (brand.contentPerformance?.underPerforming || []).join(', ')
-    const cadence = (brand.platformCadence || []).map((p) => `${p.platform} (${p.role}): ${p.targets.join(', ')}`).join('\n')
+    // Build prompt via central builder
+    const { systemPrompt } = buildPrompt({
+      type: 'suggestions',
+      query: kbQuery,
+      brandSettings: brand,
+      knowledgeChunks: kbChunks,
+    })
 
-    const prompt = `You are a senior social media strategist for Cority (EHS+ software). Generate exactly 5 proactive post suggestion objects.
+    // Active campaign IDs — derived dynamically from brand settings
+    const activeCampaignIds = (brand.activeCampaigns || [])
+      .filter((c) => c.active !== false)
+      .map((c) => `"${c.id}"`)
+      .join(', ')
 
-BRAND CONTEXT:
-Vision: ${brand.vision || ''}
-Voice pillars: ${voicePillars}
-Storytelling themes: ${storyThemes}
-Active campaigns: ${campaigns}
-Always-on content types: ${alwaysOn}
-High-performing formats: ${highPerf}
-Underperforming formats (avoid): ${underPerf}
+    const userPrompt = `Generate exactly 5 proactive post suggestion objects for Cority's social media calendar.
 
-PLATFORM CADENCE:
-${cadence}
-
-CONTENT PILLAR COVERAGE (last 30 days — prioritise underrepresented):
+CONTENT PILLAR COVERAGE — last 30 days (prioritise underrepresented pillars):
 Underrepresented pillars: ${underrepresented.join(', ') || 'none identified yet'}${perfInsights}
 
 RECENT BRIEF HISTORY (avoid repetition):
@@ -113,28 +109,27 @@ ${last10Titles.length > 0 ? last10Titles.map((t, i) => `${i + 1}. ${t}`).join('\
 
 RECENTLY DISMISSED (do not resurface):
 ${recentDismissed.length > 0 ? recentDismissed.join('\n') : 'None.'}
-${kbContext ? `\nPRODUCT KNOWLEDGE CONTEXT (reference real campaigns, customer outcomes, and product capabilities in your suggestions):\n${kbContext}` : ''}
 
 Return a JSON array of exactly 5 suggestion objects. No markdown fences, no explanation — raw JSON only.
 Each object must have exactly these keys:
 - "contentType": string (e.g. "carousel", "video", "meme", "text post", "infographic", "short-form video")
 - "platforms": string[] using only: "linkedin", "instagram", "x", "facebook", "youtube"
-- "pillar": string (exact match to one of the storytelling themes listed above)
+- "pillar": string (exact match to one of the storytelling themes in brand context)
 - "rationale": string (one sentence: why this is timely or strategic right now)
 - "suggestedAngle": string (a specific, actionable content angle — 1-2 sentences)
 - "targetAudience": string (specific persona, e.g. "EHS managers in manufacturing")
-- "suggestedCampaign": string (one of the campaign IDs above: "global-brand", "environment", or "safety")
+- "suggestedCampaign": string (one of the active campaign IDs: ${activeCampaignIds})
 
 Rules: prioritise underrepresented pillars, lean toward high-performing formats, do not suggest anything similar to recent brief history or dismissed suggestions, never generic.`
 
     const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1800,
-      messages: [{ role: 'user', content: prompt }],
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userPrompt }],
     })
 
     let text = response.content[0].text.trim()
-    // Strip markdown fences if present
     text = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()
 
     const rawBatch = JSON.parse(text)

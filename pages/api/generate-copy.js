@@ -1,8 +1,11 @@
+import path from 'path'
 import Anthropic from '@anthropic-ai/sdk'
 import { kvGet, kvSet } from '../../lib/kv'
-import { searchKnowledge, formatKnowledgeContext, getSourceDocs } from '../../lib/knowledge'
+import { searchKnowledge, getSourceDocs } from '../../lib/knowledge'
 import { readBrandSettings } from '../../lib/brand'
-const SEED_BRIEFS  = path.join(process.cwd(), 'data', 'briefs.json')
+import { buildPrompt } from '../../lib/promptBuilder'
+
+const SEED_BRIEFS   = path.join(process.cwd(), 'data', 'briefs.json')
 const SEED_CALENDAR = path.join(process.cwd(), 'data', 'calendar.json')
 
 export default async function handler(req, res) {
@@ -23,7 +26,7 @@ export default async function handler(req, res) {
   }
 
   const brandSettings = await readBrandSettings()
-  if (!brandSettings || !brandSettings.aiSystemPrompt) {
+  if (!brandSettings || !brandSettings.vision) {
     return res.status(500).json({ error: 'Could not load brand settings.' })
   }
 
@@ -73,17 +76,19 @@ ${jsonTemplate}
 Platform guidelines — follow these precisely:
 ${guidelines}`
 
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-
-  // Knowledge base retrieval — query with brief description + audience + clouds
+  // Knowledge base retrieval — query with brief + audience + cloud tags
   const kbQuery = [description, audience, clouds?.join(' ')].filter(Boolean).join(' ')
   const kbChunks = await searchKnowledge(kbQuery, 3)
-  const kbContext = formatKnowledgeContext(kbChunks)
   const sourceDocs = getSourceDocs(kbChunks)
 
-  const systemPrompt = kbContext
-    ? `${brandSettings.aiSystemPrompt}\n\n---\nPRODUCT KNOWLEDGE CONTEXT\nThe following excerpts are from Cority's internal documents. Reference specific customer stories, product names, and real data points from this context when drafting copy — do not invent generic claims.\n\n${kbContext}`
-    : brandSettings.aiSystemPrompt
+  const { systemPrompt, contextBlock } = buildPrompt({
+    type: 'copy',
+    query: kbQuery,
+    brandSettings,
+    knowledgeChunks: kbChunks,
+  })
+
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
   try {
     const message = await client.messages.create({
@@ -138,7 +143,12 @@ ${guidelines}`
       }
     } catch {}
 
-    return res.status(200).json({ variants, briefId: brief.id, sourceDocs })
+    return res.status(200).json({
+      variants,
+      briefId: brief.id,
+      sourceDocs,
+      debugPrompt: { systemPrompt, contextBlock },
+    })
   } catch (err) {
     console.error('Copy generation error:', err)
     if (err instanceof SyntaxError) {

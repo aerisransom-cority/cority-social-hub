@@ -105,7 +105,7 @@ export default function BrandSettings() {
   const [saveStatus, setSaveStatus] = useState(null) // 'saved' | 'error' | null
   const [isDirty, setIsDirty] = useState(false)
   const [activeSection, setActiveSection] = useState('overview')
-  const [editingPrompt, setEditingPrompt] = useState(false)
+  // editingPrompt state kept for compatibility but no longer used as a lock toggle
   const [kbStats, setKbStats] = useState(null)
 
   // Confirm-remove states
@@ -257,7 +257,7 @@ export default function BrandSettings() {
     { id: 'campaigns',  label: 'Campaigns' },
     { id: 'content',    label: 'Content Mix' },
     { id: 'platforms',  label: 'Platforms' },
-    { id: 'ai-prompt',  label: 'AI System Prompt' },
+    { id: 'ai-prompt',  label: 'AI Instructions' },
     { id: 'knowledge',  label: 'Knowledge Base' },
   ]
 
@@ -662,35 +662,49 @@ export default function BrandSettings() {
             </div>
           )}
 
-          {/* AI SYSTEM PROMPT */}
+          {/* AI INSTRUCTIONS */}
           {activeSection === 'ai-prompt' && (
-            <div className="card p-8">
-              <div className="flex items-start justify-between mb-6">
-                <div>
-                  <h2 className="text-base font-medium text-black">AI System Prompt</h2>
-                  <p className="text-sm text-black/40 font-[350] mt-1">
-                    This is injected into every AI call as the brand context. Edit with care.
-                  </p>
-                </div>
-                <button className="btn-secondary" onClick={() => setEditingPrompt(!editingPrompt)}>
-                  {editingPrompt ? 'Lock' : 'Edit'}
-                </button>
-              </div>
-              {editingPrompt ? (
+            <div className="space-y-6">
+              <div className="card p-8">
+                <h2 className="text-base font-medium text-black mb-1">Custom AI Instructions</h2>
+                <p className="text-sm text-black/40 font-[350] mb-6">
+                  Optional. These instructions are appended to the built-in brand-aware system prompt on every AI call. Use them for edge cases, tone nuances, or temporary guidance — the core prompt already includes your voice pillars, campaigns, and platform rules.
+                </p>
                 <textarea
-                  className="textarea font-mono text-xs leading-relaxed"
-                  rows={28}
-                  value={settings.aiSystemPrompt}
-                  onChange={(e) => handleFieldChange('aiSystemPrompt', e.target.value)}
+                  className="textarea"
+                  rows={6}
+                  placeholder="e.g. For the next two weeks, avoid referencing competitors. Always mention our upcoming webinar on April 15 when relevant…"
+                  value={settings.customInstructions || ''}
+                  onChange={(e) => handleFieldChange('customInstructions', e.target.value)}
                 />
-              ) : (
-                <pre
-                  className="text-xs text-black/60 whitespace-pre-wrap leading-relaxed font-mono max-h-[500px] overflow-y-auto p-5"
-                  style={{ border: '0.79px solid #D9D8D6', borderRadius: 6, fontWeight: 350 }}
-                >
-                  {settings.aiSystemPrompt}
-                </pre>
-              )}
+                <p className="text-[10px] text-black/35 font-[350] mt-2">
+                  Leave blank to use the built-in system prompt without modification.
+                </p>
+              </div>
+
+              <div className="card p-8">
+                <h2 className="text-base font-medium text-black mb-1">What the AI always knows</h2>
+                <p className="text-sm text-black/40 font-[350] mb-4">
+                  These are built into every AI prompt automatically from your brand settings — you don't need to repeat them in custom instructions.
+                </p>
+                <ul className="space-y-2">
+                  {[
+                    'Brand vision and win strategy',
+                    'Voice pillars (Clarity, Empathy, Fact-Based, Action-Oriented)',
+                    'All active storytelling themes',
+                    'All active campaigns and their themes',
+                    'High-performing and underperforming content formats',
+                    'Always-on content types',
+                    'Platform cadence targets',
+                    'Knowledge base documents (when relevant to the request)',
+                  ].map((item) => (
+                    <li key={item} className="flex items-start gap-2 text-sm text-black/60 font-[350]">
+                      <span className="text-xs mt-0.5" style={{ color: '#49763E' }}>✓</span>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
           )}
 
