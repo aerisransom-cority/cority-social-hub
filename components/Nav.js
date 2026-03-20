@@ -2,16 +2,18 @@ import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { useSession, signOut } from 'next-auth/react'
 
-const tabs = [
-  { href: '/content-studio', label: 'Content Studio', icon: '✍️' },
-  { href: '/performance',    label: 'Performance',    icon: '📊' },
-  { href: '/utm-builder',    label: 'UTM Builder',    icon: '🔗' },
-  { href: '/brand-settings', label: 'Brand Settings', icon: '🎯' },
+const ALL_TABS = [
+  { href: '/content-studio', label: 'Content Studio', icon: '✍️', roles: ['admin', 'contributor', 'reviewer'] },
+  { href: '/performance',    label: 'Performance',    icon: '📊', roles: ['admin', 'contributor'] },
+  { href: '/utm-builder',    label: 'UTM Builder',    icon: '🔗', roles: ['admin', 'contributor'] },
+  { href: '/brand-settings', label: 'Brand Settings', icon: '🎯', roles: ['admin'] },
 ]
 
 export default function Nav() {
   const router = useRouter()
   const { data: session } = useSession()
+  const role = session?.user?.role || 'admin'
+  const tabs = ALL_TABS.filter((t) => t.roles.includes(role))
 
   return (
     <header
