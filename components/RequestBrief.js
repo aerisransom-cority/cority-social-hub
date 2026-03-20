@@ -94,6 +94,7 @@ export default function RequestBrief() {
   const [result, setResult] = useState(null)
   const [activeTab, setActiveTab] = useState('linkedin')
   const [platformUtms, setPlatformUtms] = useState({}) // { linkedin: url, instagram: url, ... }
+  const [utmExpanded, setUtmExpanded] = useState(false)
 
   function handleField(field, value) {
     setForm((f) => ({ ...f, [field]: value }))
@@ -450,78 +451,6 @@ export default function RequestBrief() {
           </div>
         )}
 
-        {result && !loading && Object.keys(platformUtms).length > 0 && (
-          <div className="card mb-4">
-            <div
-              className="flex items-center justify-between px-6 py-3"
-              style={{ borderBottom: '0.75px solid #D9D8D6' }}
-            >
-              <p className="text-[9px] font-medium uppercase tracking-[0.08em] text-black/40">UTM URLs — this brief</p>
-              <button
-                onClick={() => {
-                  const rows = [['Platform', 'Source', 'Medium', 'Campaign', 'Content', 'Term', 'Full URL']]
-                  for (const [pid, url] of Object.entries(platformUtms)) {
-                    const src = UTM_SOURCE[pid]
-                    if (!src) continue
-                    const med = (pid === 'linkedin' && form.utmIsPromoted) ? 'pp' : 'social'
-                    const plat = PLATFORMS.find((p) => p.id === pid)?.label || pid
-                    rows.push([plat, src, med, form.utmCampaign || '', form.utmContent || '', form.utmTerm || '', url])
-                  }
-                  const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
-                  const a = document.createElement('a')
-                  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
-                  a.download = `utms-brief-${result.briefId || Date.now()}.csv`
-                  a.click()
-                }}
-                style={{
-                  fontSize: 11,
-                  padding: '3px 10px',
-                  border: '0.79px solid #D9D8D6',
-                  borderRadius: 4,
-                  background: '#fff',
-                  color: 'rgba(0,0,0,0.5)',
-                  cursor: 'pointer',
-                  fontWeight: 400,
-                }}
-              >
-                Export CSV
-              </button>
-            </div>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
-                <thead>
-                  <tr style={{ background: '#FAFAFA' }}>
-                    {['Platform', 'Campaign', 'UTM-tagged URL', ''].map((h) => (
-                      <th key={h} style={{ padding: '6px 12px', textAlign: 'left', fontWeight: 500, color: 'rgba(0,0,0,0.4)', whiteSpace: 'nowrap', borderBottom: '0.75px solid #D9D8D6' }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {Object.entries(platformUtms).map(([pid, url]) => {
-                    const plat = PLATFORMS.find((p) => p.id === pid)
-                    return (
-                      <tr key={pid} style={{ borderBottom: '0.75px solid #D9D8D6' }}>
-                        <td style={{ padding: '8px 12px', whiteSpace: 'nowrap', color: '#000', fontWeight: 400 }}>
-                          {plat?.icon} {plat?.label || pid}
-                        </td>
-                        <td style={{ padding: '8px 12px', whiteSpace: 'nowrap', color: 'rgba(0,0,0,0.5)' }}>
-                          {form.utmCampaign || <span style={{ fontStyle: 'italic', color: 'rgba(0,0,0,0.3)' }}>—</span>}
-                        </td>
-                        <td style={{ padding: '8px 12px', maxWidth: 360, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          <span style={{ fontFamily: 'monospace', color: 'rgba(0,0,0,0.5)', fontSize: 10 }}>{url}</span>
-                        </td>
-                        <td style={{ padding: '8px 12px', whiteSpace: 'nowrap' }}>
-                          <CopyButton text={url} />
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
         {result && !loading && (
           <div className="card">
             <div
@@ -659,6 +588,97 @@ export default function RequestBrief() {
                 </div>
               )}
             </div>
+
+            {/* ── Collapsible UTM summary ── */}
+            {Object.keys(platformUtms).length > 0 && (
+              <div style={{ borderTop: '0.75px solid #D9D8D6' }}>
+                <button
+                  onClick={() => setUtmExpanded((v) => !v)}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '10px 24px',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                  }}
+                >
+                  <span style={{ fontSize: 9, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(0,0,0,0.4)' }}>
+                    {utmExpanded ? '▾' : '▸'} UTM URLs — this brief
+                  </span>
+                  {utmExpanded && (
+                    <span
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        const rows = [['Platform', 'Source', 'Medium', 'Campaign', 'Content', 'Term', 'Full URL']]
+                        for (const [pid, url] of Object.entries(platformUtms)) {
+                          const src = UTM_SOURCE[pid]
+                          if (!src) continue
+                          const med = (pid === 'linkedin' && form.utmIsPromoted) ? 'pp' : 'social'
+                          const plat = PLATFORMS.find((p) => p.id === pid)?.label || pid
+                          rows.push([plat, src, med, form.utmCampaign || '', form.utmContent || '', form.utmTerm || '', url])
+                        }
+                        const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
+                        const a = document.createElement('a')
+                        a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
+                        a.download = `utms-brief-${result.briefId || Date.now()}.csv`
+                        a.click()
+                      }}
+                      style={{
+                        fontSize: 11,
+                        padding: '2px 10px',
+                        border: '0.79px solid #D9D8D6',
+                        borderRadius: 4,
+                        background: '#fff',
+                        color: 'rgba(0,0,0,0.5)',
+                        cursor: 'pointer',
+                        fontWeight: 400,
+                      }}
+                    >
+                      Export CSV
+                    </span>
+                  )}
+                </button>
+
+                {utmExpanded && (
+                  <div style={{ overflowX: 'auto', borderTop: '0.75px solid #D9D8D6' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+                      <thead>
+                        <tr style={{ background: '#FAFAFA' }}>
+                          {['Platform', 'Campaign', 'UTM-tagged URL', ''].map((h) => (
+                            <th key={h} style={{ padding: '6px 12px', textAlign: 'left', fontWeight: 500, color: 'rgba(0,0,0,0.4)', whiteSpace: 'nowrap', borderBottom: '0.75px solid #D9D8D6' }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Object.entries(platformUtms).map(([pid, url]) => {
+                          const plat = PLATFORMS.find((p) => p.id === pid)
+                          return (
+                            <tr key={pid} style={{ borderBottom: '0.75px solid #D9D8D6' }}>
+                              <td style={{ padding: '8px 12px', whiteSpace: 'nowrap', color: '#000', fontWeight: 400 }}>
+                                {plat?.icon} {plat?.label || pid}
+                              </td>
+                              <td style={{ padding: '8px 12px', whiteSpace: 'nowrap', color: 'rgba(0,0,0,0.5)' }}>
+                                {form.utmCampaign || <span style={{ fontStyle: 'italic', color: 'rgba(0,0,0,0.3)' }}>—</span>}
+                              </td>
+                              <td style={{ padding: '8px 12px', maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                <span style={{ fontFamily: 'monospace', color: 'rgba(0,0,0,0.5)', fontSize: 10 }}>{url}</span>
+                              </td>
+                              <td style={{ padding: '8px 12px', whiteSpace: 'nowrap' }}>
+                                <CopyButton text={url} />
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
