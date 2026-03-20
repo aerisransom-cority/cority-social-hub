@@ -137,7 +137,7 @@ function LogRow({ utm }) {
   const date = utm.date ? new Date(utm.date).toLocaleDateString('en-CA') : '—'
   return (
     <tr style={{ borderBottom: '0.75px solid #D9D8D6' }}>
-      <td className="py-3 pr-4 text-black/50 font-[350] whitespace-nowrap text-xs">{date}</td>
+      <td className="py-3 pr-4 text-black/50 font-[350] whitespace-nowrap text-xs" style={{ paddingLeft: '24px' }}>{date}</td>
       <td className="py-3 pr-4 text-xs font-[350]" style={{ maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         <a href={utm.baseUrl} target="_blank" rel="noopener noreferrer" className="text-black hover:underline">{utm.baseUrl}</a>
       </td>
@@ -368,9 +368,19 @@ export default function UTMBuilder() {
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
-                <tr style={{ borderBottom: '0.75px solid #D9D8D6' }}>
-                  {['Date', 'Base URL', 'Source', 'Medium', 'Campaign', 'Content', 'Brief', 'Full UTM URL', ''].map((h) => (
-                    <th key={h} className="section-label text-left pb-3 pr-4 px-6" style={{ marginBottom: 0, whiteSpace: 'nowrap', paddingLeft: h === 'Date' ? '24px' : undefined }}>
+                <tr style={{ background: '#FAFAFA', borderBottom: '0.75px solid #D9D8D6' }}>
+                  {['Date', 'Base URL', 'Source', 'Medium', 'Campaign', 'Content', 'Brief', 'Full UTM URL', ''].map((h, i) => (
+                    <th key={h} style={{
+                      padding: '8px 16px 8px',
+                      paddingLeft: i === 0 ? '24px' : '16px',
+                      textAlign: 'left',
+                      fontSize: 9,
+                      fontWeight: 500,
+                      textTransform: 'uppercase',
+                      letterSpacing: '1.38px',
+                      color: 'rgba(0,0,0,0.4)',
+                      whiteSpace: 'nowrap',
+                    }}>
                       {h}
                     </th>
                   ))}
