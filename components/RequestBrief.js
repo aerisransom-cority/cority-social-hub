@@ -278,7 +278,7 @@ export default function RequestBrief({ initialValues }) {
         for (const [platformId, fullUrl] of Object.entries(utms)) {
           const source = UTM_SOURCE[platformId]
           const medium = (platformId === 'linkedin' && form.utmIsPromoted) ? 'pp' : 'social'
-          if (form.utmCampaign && form.utmContent) {
+          if (form.url) {  // Save UTM to log whenever we have a URL — campaign/content are optional
             fetch('/api/utms', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -286,8 +286,8 @@ export default function RequestBrief({ initialValues }) {
                 baseUrl: form.url,
                 source,
                 medium,
-                campaign: form.utmCampaign.toLowerCase(),
-                content: form.utmContent.toLowerCase(),
+                campaign: form.utmCampaign ? form.utmCampaign.toLowerCase() : null,
+                content: form.utmContent ? form.utmContent.toLowerCase() : null,
                 term: form.utmTerm ? form.utmTerm.toLowerCase().replace(/\s+/g, '-') : null,
                 briefId: data.briefId || null,
                 fullUrl,
@@ -513,7 +513,7 @@ export default function RequestBrief({ initialValues }) {
               </div>
 
               <div>
-                <label className="section-label">utm_campaign</label>
+                <label className="section-label">utm_campaign <span className="text-black/40 normal-case">(optional)</span></label>
                 <SearchableSelect
                   options={CAMPAIGNS}
                   value={form.utmCampaign}
@@ -523,13 +523,13 @@ export default function RequestBrief({ initialValues }) {
               </div>
 
               <div>
-                <label className="section-label">utm_content</label>
+                <label className="section-label">utm_content <span className="text-black/40 normal-case">(optional)</span></label>
                 <select
                   className="input"
                   value={form.utmContent}
                   onChange={(e) => handleField('utmContent', e.target.value)}
                 >
-                  <option value="">— select content type —</option>
+                  <option value="">— none —</option>
                   {CONTENT_TYPES_UTM.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>

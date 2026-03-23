@@ -53,22 +53,29 @@ You are also a strategic creative partner for Cority's social media manager. Hel
 
     const assistantMessage = { role: 'assistant', content: response.content[0].text }
 
-    // Save session to KV history (non-fatal)
+    // Save session to user-scoped KV history (non-fatal)
     try {
       const sid = sessionId || Date.now().toString()
-      const history = await kvGet('chat-history', null) || []
+      const userEmail = session.user?.email || 'unknown'
+      const key = `chat-history-${userEmail.toLowerCase().replace(/[^a-z0-9]/g, '-')}`
+      const history = await kvGet(key, null) || []
+      const allMessages = [...messages, assistantMessage]
+      const firstUserMsg = allMessages.find((m) => m.role === 'user')
       const existingIdx = history.findIndex((s) => s.id === sid)
       const updatedSession = {
         id: sid,
+        createdAt: existingIdx >= 0 ? history[existingIdx].createdAt : new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        messages: [...messages, assistantMessage],
+        firstMessage: (firstUserMsg?.content || '').slice(0, 80),
+        messageCount: allMessages.length,
+        messages: allMessages,
       }
       if (existingIdx >= 0) {
         history[existingIdx] = updatedSession
       } else {
         history.unshift(updatedSession)
       }
-      await kvSet('chat-history', history.slice(0, 50))
+      await kvSet(key, history.slice(0, 30))
     } catch {}
 
     return res.status(200).json({

@@ -28,23 +28,23 @@ const MEDIUM_BY_SOURCE = {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function buildUtmUrl(baseUrl, { source, medium, campaign, content, term }) {
-  if (!baseUrl || !source || !medium || !campaign || !content) return ''
+  if (!baseUrl || !source || !medium) return ''
   try {
     const url = new URL(baseUrl)
-    url.searchParams.set('utm_source',   source.toLowerCase())
-    url.searchParams.set('utm_medium',   medium.toLowerCase())
-    url.searchParams.set('utm_campaign', campaign.toLowerCase())
-    url.searchParams.set('utm_content',  content.toLowerCase())
-    if (term) url.searchParams.set('utm_term', term.toLowerCase().replace(/\s+/g, '-'))
+    url.searchParams.set('utm_source',  source.toLowerCase())
+    url.searchParams.set('utm_medium',  medium.toLowerCase())
+    if (campaign) url.searchParams.set('utm_campaign', campaign.toLowerCase())
+    if (content)  url.searchParams.set('utm_content',  content.toLowerCase())
+    if (term)     url.searchParams.set('utm_term', term.toLowerCase().replace(/\s+/g, '-'))
     return url.toString()
   } catch {
     // Invalid URL — return raw with manual params
     const params = [
       `utm_source=${source.toLowerCase()}`,
       `utm_medium=${medium.toLowerCase()}`,
-      `utm_campaign=${campaign.toLowerCase()}`,
-      `utm_content=${content.toLowerCase()}`,
-      ...(term ? [`utm_term=${term.toLowerCase().replace(/\s+/g, '-')}`] : []),
+      ...(campaign ? [`utm_campaign=${campaign.toLowerCase()}`] : []),
+      ...(content  ? [`utm_content=${content.toLowerCase()}`]  : []),
+      ...(term     ? [`utm_term=${term.toLowerCase().replace(/\s+/g, '-')}`] : []),
     ].join('&')
     return `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}${params}`
   }
@@ -262,18 +262,18 @@ export default function UTMBuilder() {
             </select>
           </div>
 
-          {/* Campaign — searchable */}
+          {/* Campaign — searchable, optional */}
           <div>
-            <label className="section-label">utm_campaign <span className="text-cority-red">*</span></label>
+            <label className="section-label">utm_campaign <span className="text-black/40 normal-case">(optional)</span></label>
             <SearchableSelect options={CAMPAIGNS} value={form.campaign}
               onChange={(v) => setField('campaign', v)} placeholder="Search campaigns…" />
           </div>
 
-          {/* Content */}
+          {/* Content — optional */}
           <div>
-            <label className="section-label">utm_content <span className="text-cority-red">*</span></label>
+            <label className="section-label">utm_content <span className="text-black/40 normal-case">(optional)</span></label>
             <select className="input" value={form.content} onChange={(e) => setField('content', e.target.value)}>
-              <option value="">Select content type…</option>
+              <option value="">— none —</option>
               {CONTENT_TYPES_UTM.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
